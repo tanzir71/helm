@@ -1,5 +1,6 @@
 export * from './agent-runner.js';
 export * from './agents-loader.js';
+export * from './composer-actions.js';
 export * from './context-manager.js';
 export * from './model-profiles.js';
 export * from './models.js';

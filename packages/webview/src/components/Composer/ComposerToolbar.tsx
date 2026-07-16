@@ -6,9 +6,10 @@ import { ModelPill } from './ModelPill';
 
 export interface ComposerToolbarProps {
   canSend: boolean;
+  models: ReadonlyArray<{ id: string; label: string }>;
   onAttach: () => void;
+  onModelChange: (modelId: string, effort: SessionSettings['reasoningEffort']) => void;
   onModeChange: (mode: ApprovalMode) => void;
-  onOpenModel: () => void;
   onSend: () => void;
   onStop: () => void;
   onToggleAutoContext: () => void;
@@ -18,9 +19,10 @@ export interface ComposerToolbarProps {
 
 export function ComposerToolbar({
   canSend,
+  models,
   onAttach,
+  onModelChange,
   onModeChange,
-  onOpenModel,
   onSend,
   onStop,
   onToggleAutoContext,
@@ -54,7 +56,8 @@ export function ComposerToolbar({
         <ModelPill
           effort={settings.reasoningEffort}
           modelId={settings.modelId}
-          onOpen={onOpenModel}
+          models={models}
+          onChange={onModelChange}
         />
         <ModePill mode={settings.mode} onChange={onModeChange} />
         <button

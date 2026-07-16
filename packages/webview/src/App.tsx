@@ -1,4 +1,11 @@
-import type { ApprovalMode, HostToWebviewMessage, SuggestedAction } from '@helm/core/browser';
+import {
+  isOpenWeightFamily,
+  resolveModelProfile,
+  STATIC_MODELS,
+  type ApprovalMode,
+  type HostToWebviewMessage,
+  type SuggestedAction,
+} from '@helm/core/browser';
 import { useCallback, useEffect, useReducer } from 'react';
 
 import { Composer, type SubmitKind } from './components/Composer/Composer';
@@ -13,7 +20,12 @@ import { PlanCard } from './components/PlanCard';
 import { SettingsView } from './components/Settings/SettingsView';
 import { ToolCard } from './components/ToolCard';
 import { Transcript } from './components/Transcript';
-import { selectIsRunning, selectTokenLabel, selectVisibleSuggestions } from './state/selectors';
+import {
+  selectIsRunning,
+  selectStreamingMessage,
+  selectTokenLabel,
+  selectVisibleSuggestions,
+} from './state/selectors';
 import { initialUiState, uiReducer } from './state/store';
 import { vscode } from './vscode';
 
@@ -38,16 +50,27 @@ function statusForTool(name: string): string {
 export function App(): React.JSX.Element {
   const [state, dispatch] = useReducer(uiReducer, initialUiState);
   const running = selectIsRunning(state);
+  const streamingMessage = selectStreamingMessage(state);
   const suggestions = selectVisibleSuggestions(state);
   const tokenLabel = selectTokenLabel(state);
+  const modelProfile = resolveModelProfile(state.settings.modelId);
+  const tokenCount = state.tokenUsage.input + state.tokenUsage.output;
+  const nearingCompaction =
+    tokenCount >=
+    modelProfile.contextWindow * (isOpenWeightFamily(modelProfile.family) ? 0.7 : 0.8);
+  const models =
+    state.modelsByProvider[state.settings.provider] ??
+    STATIC_MODELS[state.settings.provider as keyof typeof STATIC_MODELS] ??
+    [];
   const pendingTool = [...state.tools]
     .reverse()
     .find((tool) => tool.ok === undefined && !tool.approval);
-  const status = running
-    ? pendingTool
-      ? statusForTool(pendingTool.name)
-      : 'Thinking…'
-    : undefined;
+  const status =
+    running && (pendingTool || !streamingMessage?.text)
+      ? pendingTool
+        ? statusForTool(pendingTool.name)
+        : 'Thinking…'
+      : undefined;
 
   useEffect(() => {
     const receive = (event: MessageEvent<HostToWebviewMessage>) => {
@@ -194,6 +217,8 @@ export function App(): React.JSX.Element {
       <Transcript
         activeRunMessageId={state.activeRunMessageId}
         messages={state.messages}
+        reasoningDurationMs={state.reasoningDurationMs}
+        reasoningStartedAt={state.reasoningStartedAt}
         status={status}
       >
         {state.messages.length === 0 && (
@@ -265,9 +290,17 @@ export function App(): React.JSX.Element {
         <Composer
           contextItems={state.contextItems}
           input={state.input}
+          models={models}
           onInputChange={(value) => dispatch({ type: 'inputChanged', value })}
+          onModelChange={(modelId, reasoningEffort) =>
+            saveProviderSettings(
+              state.settings.provider,
+              modelId,
+              state.settings.baseURL ?? '',
+              reasoningEffort,
+            )
+          }
           onModeChange={(mode: ApprovalMode) => vscode.postMessage({ type: 'setMode', mode })}
-          onOpenModel={() => dispatch({ type: 'settingsVisibilityChanged', open: true })}
           onStop={() => vscode.postMessage({ type: 'stopRun' })}
           onSubmit={send}
           onToggleAutoContext={() =>
@@ -276,7 +309,9 @@ export function App(): React.JSX.Element {
           running={running}
           settings={state.settings}
         />
-        <div className="text-right text-[length:var(--helm-font-size-meta)] text-[var(--helm-description-foreground)]">
+        <div
+          className={`text-right text-[length:var(--helm-font-size-meta)] ${nearingCompaction ? 'text-[var(--helm-warning)]' : 'text-[var(--helm-description-foreground)]'}`}
+        >
           {tokenLabel}
         </div>
       </section>

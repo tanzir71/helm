@@ -2,34 +2,34 @@
 
 ## Current
 
-R2 composer and transcript — finish the Codex-density interaction layer on top of the R1 reducer
-and component foundation.
+R3 cards, settings, and empty states — consolidate transcript actions around shared primitives and
+lock the ten audited UI bugs behind regression coverage.
 
-1. Centralize Enter/Tab behavior in core and cover all key/state combinations.
-2. Add keyboard-complete model, mode, slash, and mention popovers.
-3. Virtualize the transcript while preserving user-controlled scroll position.
-4. Finish thinking duration/status behavior and code-block overflow protection.
-5. Verify composer, transcript, queue, and suggestion interactions; record and commit R2.
+1. Group consecutive read-only tools and complete approval/diff card interactions.
+2. Finish the provider/defaults in-panel settings sections and inline connection state.
+3. Validate key-gated empty states and the native diff-opening path.
+4. Add regression coverage for all ten §3.10 bugs and settings/card state transitions.
+5. Run repository and Electron gates, record evidence, and commit R3.
 
 ## Milestones
 
 ### R1 — Foundation
 
 - [x] `tokens.css` created; all colors/spacing/radius/type flow from it; zero hex literals in
-  components (enforced by a lint grep script in `pnpm verify`)
+      components (enforced by a lint grep script in `pnpm verify`)
 - [x] Codicons bundled; every lucide icon and emoji replaced; `lucide-react` removed
 - [x] `App.tsx` split per §2.2; single store reducer; all existing Electron tests (5/5) still green
 - [x] Typed suggestions protocol; magic-string handling deleted
 
 ### R2 — Composer & transcript
 
-- [ ] Composer container per §3.5: auto-grow textarea, toolbar pills, morphing send/stop, token
+- [x] Composer container per §3.5: auto-grow textarea, toolbar pills, morphing send/stop, token
       meter
-- [ ] Model + mode popovers with keyboard navigation
-- [ ] Transcript per §3.2: no bubbles, user blocks, streaming status line, virtualized list, stable
+- [x] Model + mode popovers with keyboard navigation
+- [x] Transcript per §3.2: no bubbles, user blocks, streaming status line, virtualized list, stable
       scroll
-- [ ] Thinking block per §3.3 with duration + live last-line preview
-- [ ] Queue strip + suggestions per §3.6/§3.7 (keyboard reorder, idle-only suggestions)
+- [x] Thinking block per §3.3 with duration + live last-line preview
+- [x] Queue strip + suggestions per §3.6/§3.7 (keyboard reorder, idle-only suggestions)
 
 ### R3 — Cards, settings, empty states
 
@@ -99,3 +99,7 @@ None yet.
 - [2026-07-16] R1 foundation complete: token lint and Codicons pass, `App.tsx` is reducer-driven and
   split into panel components, typed suggestion regressions pass, `pnpm verify` is green, and the
   Electron integration suite remains 5/5.
+- [2026-07-16] R2 complete: composer key behavior has eight core cases, model/mode/command popovers
+  are keyboard-operable, the transcript uses measured virtualization with user-controlled follow,
+  thinking duration and local code overflow are covered, `pnpm verify` is green, and Electron stays
+  5/5.

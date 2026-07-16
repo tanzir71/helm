@@ -37,6 +37,8 @@ export interface UiState {
   version: string | undefined;
   messages: ChatMessage[];
   activeRunMessageId: string | undefined;
+  reasoningStartedAt: Record<string, number>;
+  reasoningDurationMs: Record<string, number>;
   runState: RunState;
   queue: Array<{ id: string; text: string }>;
   suggestions: SuggestedAction[];
@@ -68,6 +70,8 @@ export const initialUiState: UiState = {
   version: undefined,
   messages: [],
   activeRunMessageId: undefined,
+  reasoningStartedAt: {},
+  reasoningDurationMs: {},
   runState: 'idle',
   queue: [],
   suggestions: [],
@@ -138,6 +142,11 @@ function reduceHostMessage(state: UiState, message: HostToWebviewMessage): UiSta
         settings: message.settings,
         plan: message.settings.plan,
         activeRunMessageId: undefined,
+        reasoningStartedAt: {},
+        reasoningDurationMs: {},
+        suggestions: [],
+        tools: [],
+        diffs: [],
       };
     case 'messageAdded':
       return { ...state, messages: upsertMessage(state.messages, message.message) };
@@ -158,6 +167,9 @@ function reduceHostMessage(state: UiState, message: HostToWebviewMessage): UiSta
     case 'reasoningDelta':
       return {
         ...state,
+        reasoningStartedAt: state.reasoningStartedAt[message.runId]
+          ? state.reasoningStartedAt
+          : { ...state.reasoningStartedAt, [message.runId]: Date.now() },
         messages: updateMessage(state.messages, message.runId, (current) => ({
           ...current,
           reasoning: (current.reasoning ?? '') + message.text,
@@ -166,12 +178,16 @@ function reduceHostMessage(state: UiState, message: HostToWebviewMessage): UiSta
     case 'reasoningReplaced':
       return {
         ...state,
+        reasoningStartedAt: state.reasoningStartedAt[message.runId]
+          ? state.reasoningStartedAt
+          : { ...state.reasoningStartedAt, [message.runId]: Date.now() },
         messages: updateMessage(state.messages, message.runId, (current) => ({
           ...current,
           reasoning: message.text,
         })),
       };
-    case 'assistantCompleted':
+    case 'assistantCompleted': {
+      const reasoningStartedAt = state.reasoningStartedAt[message.id];
       return {
         ...state,
         messages: message.interrupted
@@ -182,7 +198,14 @@ function reduceHostMessage(state: UiState, message: HostToWebviewMessage): UiSta
           : state.messages,
         activeRunMessageId:
           state.activeRunMessageId === message.id ? undefined : state.activeRunMessageId,
+        reasoningDurationMs: reasoningStartedAt
+          ? {
+              ...state.reasoningDurationMs,
+              [message.id]: Date.now() - reasoningStartedAt,
+            }
+          : state.reasoningDurationMs,
       };
+    }
     case 'runStateChanged':
       return {
         ...state,

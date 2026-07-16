@@ -1,7 +1,7 @@
-import type { ApprovalMode, SessionSettings } from '@helm/core/browser';
-import { useLayoutEffect, useRef } from 'react';
+import { resolveEnterAction, type ApprovalMode, type SessionSettings } from '@helm/core/browser';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { CommandPopover } from './CommandPopover';
+import { CommandPopover, getCommandOptions, type CommandOption } from './CommandPopover';
 import { ComposerToolbar } from './ComposerToolbar';
 
 export type SubmitKind = 'userMessage' | 'queueMessage' | 'steerMessage';
@@ -9,9 +9,10 @@ export type SubmitKind = 'userMessage' | 'queueMessage' | 'steerMessage';
 export interface ComposerProps {
   contextItems: string[];
   input: string;
+  models: ReadonlyArray<{ id: string; label: string }>;
   onInputChange: (value: string) => void;
+  onModelChange: (modelId: string, effort: SessionSettings['reasoningEffort']) => void;
   onModeChange: (mode: ApprovalMode) => void;
-  onOpenModel: () => void;
   onStop: () => void;
   onSubmit: (kind: SubmitKind) => void;
   onToggleAutoContext: () => void;
@@ -22,9 +23,10 @@ export interface ComposerProps {
 export function Composer({
   contextItems,
   input,
+  models,
   onInputChange,
+  onModelChange,
   onModeChange,
-  onOpenModel,
   onStop,
   onSubmit,
   onToggleAutoContext,
@@ -32,6 +34,17 @@ export function Composer({
   settings,
 }: ComposerProps): React.JSX.Element {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [activeCommandIndex, setActiveCommandIndex] = useState(0);
+  const [dismissedCommandInput, setDismissedCommandInput] = useState<string>();
+  const commandOptions = useMemo(
+    () => getCommandOptions(input, contextItems),
+    [contextItems, input],
+  );
+  const visibleCommandOptions = dismissedCommandInput === input ? [] : commandOptions;
+
+  useEffect(() => {
+    setActiveCommandIndex(0);
+  }, [input]);
 
   useLayoutEffect(() => {
     const textarea = textareaRef.current;
@@ -40,33 +53,71 @@ export function Composer({
     textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`;
   }, [input]);
 
-  const primarySubmit: SubmitKind = running
-    ? settings.enterBehavior === 'queue'
-      ? 'queueMessage'
-      : 'steerMessage'
-    : 'userMessage';
-  const inverseSubmit: SubmitKind =
-    settings.enterBehavior === 'queue' ? 'steerMessage' : 'queueMessage';
+  const primarySubmit = resolveEnterAction(settings, running, 'Enter') ?? 'userMessage';
+  const chooseCommand = (option: CommandOption) => {
+    const nextInput =
+      option.kind === 'mention'
+        ? input.replace(/@[^\s]*$/u, option.value)
+        : `/${option.value}${option.value === 'goal' ? ' ' : ''}`;
+    setDismissedCommandInput(nextInput);
+    onInputChange(nextInput);
+    textareaRef.current?.focus();
+  };
 
   return (
     <div className="relative min-w-0 rounded-[var(--helm-radius-container)] border border-[var(--helm-border)] bg-[var(--helm-input-background)] focus-within:border-[var(--helm-focus-border)]">
       <CommandPopover
-        contextItems={contextItems}
+        activeIndex={activeCommandIndex}
         input={input}
-        onChooseMention={(name) => onInputChange(input.replace(/@[^\s]*$/u, name))}
-        onChooseSlash={(name) => onInputChange(`/${name}${name === 'goal' ? ' ' : ''}`)}
+        onChoose={chooseCommand}
+        options={visibleCommandOptions}
       />
       <textarea
+        aria-activedescendant={
+          visibleCommandOptions.length > 0 ? `helm-command-option-${activeCommandIndex}` : undefined
+        }
+        aria-controls={visibleCommandOptions.length > 0 ? 'helm-command-popover' : undefined}
         aria-label="Message Helm"
-        className="block max-h-[180px] min-h-[36px] w-full resize-none overflow-y-auto border-0 bg-transparent px-2 py-2 outline-none placeholder:text-[var(--helm-input-placeholder)]"
-        onChange={(event) => onInputChange(event.target.value)}
+        className="block max-h-[180px] min-h-8 w-full resize-none overflow-y-auto border-0 bg-transparent px-2 py-2 outline-none placeholder:text-[var(--helm-input-placeholder)]"
+        onChange={(event) => {
+          setDismissedCommandInput(undefined);
+          onInputChange(event.target.value);
+        }}
         onKeyDown={(event) => {
+          if (visibleCommandOptions.length > 0) {
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+              event.preventDefault();
+              const delta = event.key === 'ArrowDown' ? 1 : -1;
+              setActiveCommandIndex(
+                (current) =>
+                  (current + delta + visibleCommandOptions.length) % visibleCommandOptions.length,
+              );
+              return;
+            }
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              setDismissedCommandInput(input);
+              return;
+            }
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
+              const option = visibleCommandOptions[activeCommandIndex];
+              if (option) chooseCommand(option);
+              return;
+            }
+          }
           if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
             if (input.trim()) onSubmit(primarySubmit);
-          } else if (event.key === 'Tab' && running && input.trim()) {
+          } else if (
+            event.key === 'Tab' &&
+            visibleCommandOptions.length === 0 &&
+            running &&
+            input.trim()
+          ) {
             event.preventDefault();
-            onSubmit(inverseSubmit);
+            const action = resolveEnterAction(settings, running, 'Tab');
+            if (action) onSubmit(action);
           }
         }}
         placeholder="Ask Helm anything — @ for context, / for commands"
@@ -76,9 +127,10 @@ export function Composer({
       />
       <ComposerToolbar
         canSend={Boolean(input.trim())}
+        models={models}
         onAttach={() => onInputChange(`${input}@`)}
+        onModelChange={onModelChange}
         onModeChange={onModeChange}
-        onOpenModel={onOpenModel}
         onSend={() => onSubmit(primarySubmit)}
         onStop={onStop}
         onToggleAutoContext={onToggleAutoContext}

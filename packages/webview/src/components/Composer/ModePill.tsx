@@ -1,5 +1,5 @@
 import type { ApprovalMode } from '@helm/core/browser';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Icon } from '../Icon';
 
@@ -16,20 +16,55 @@ const modes: Array<{ id: ApprovalMode; label: string; description: string }> = [
 
 export function ModePill({ mode, onChange }: ModePillProps): React.JSX.Element {
   const [open, setOpen] = useState(false);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const label = modes.find((item) => item.id === mode)?.label ?? mode;
+
+  useEffect(() => {
+    if (!open) return;
+    const index = Math.max(
+      0,
+      modes.findIndex((item) => item.id === mode),
+    );
+    optionRefs.current[index]?.focus();
+  }, [mode, open]);
 
   return (
     <div className="relative">
       {open && (
-        <div className="absolute right-0 bottom-[calc(100%+4px)] z-20 grid w-[240px] gap-1 rounded-[var(--helm-radius-container)] border border-[var(--helm-border)] bg-[var(--helm-widget-background)] p-1 shadow-[var(--helm-popover-shadow)]">
-          {modes.map((item) => (
+        <div
+          className="absolute right-0 bottom-[calc(100%+4px)] z-20 grid w-[min(240px,calc(100vw-16px))] gap-1 rounded-[var(--helm-radius-container)] border border-[var(--helm-border)] bg-[var(--helm-widget-background)] p-1 shadow-[var(--helm-popover-shadow)]"
+          onKeyDown={(event) => {
+            const current = optionRefs.current.findIndex(
+              (element) => element === document.activeElement,
+            );
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              setOpen(false);
+            } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+              event.preventDefault();
+              const delta = event.key === 'ArrowDown' ? 1 : -1;
+              const next = (current + delta + modes.length) % modes.length;
+              optionRefs.current[next]?.focus();
+            } else if (event.key === 'Home' || event.key === 'End') {
+              event.preventDefault();
+              optionRefs.current[event.key === 'Home' ? 0 : modes.length - 1]?.focus();
+            }
+          }}
+          role="menu"
+        >
+          {modes.map((item, index) => (
             <button
+              aria-checked={item.id === mode}
               className={`flex min-w-0 items-start gap-2 rounded-[var(--helm-radius-control)] border-0 p-2 text-left hover:bg-[var(--helm-list-hover)] ${item.id === mode ? 'bg-[var(--helm-list-active)] text-[var(--helm-list-active-foreground)]' : 'bg-transparent'}`}
               key={item.id}
               onClick={() => {
                 onChange(item.id);
                 setOpen(false);
               }}
+              ref={(element) => {
+                optionRefs.current[index] = element;
+              }}
+              role="menuitemradio"
               type="button"
             >
               <Icon
