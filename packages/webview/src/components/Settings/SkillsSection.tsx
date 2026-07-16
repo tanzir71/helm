@@ -71,11 +71,11 @@ export function SkillsSection({
                   <span className="grid min-w-0 flex-1 gap-0.5">
                     <span className="flex min-w-0 flex-wrap items-center gap-1">
                       <code className="break-all">{skill.name}</code>
-                      <span className="rounded-[var(--helm-radius-control)] border border-[var(--helm-border)] px-1 text-[10px] uppercase text-[var(--helm-description-foreground)]">
+                      <span className="rounded-[var(--helm-radius-control)] border border-[var(--helm-border)] px-1 text-[length:var(--helm-font-size-meta)] uppercase text-[var(--helm-description-foreground)]">
                         {source.label}
                       </span>
                       {skill.enabled && !skill.active && (
-                        <span className="text-[10px] text-[var(--helm-description-foreground)]">
+                        <span className="text-[length:var(--helm-font-size-meta)] text-[var(--helm-description-foreground)]">
                           overridden
                         </span>
                       )}

@@ -137,7 +137,7 @@ export function Transcript({
       {showScrollButton && (
         <button
           aria-label="Scroll to latest message"
-          className="absolute bottom-2 left-1/2 flex size-6 -translate-x-1/2 items-center justify-center rounded-full border border-[var(--helm-border)] bg-[var(--helm-widget-background)] p-0 shadow-[var(--helm-popover-shadow)] hover:bg-[var(--helm-list-hover)]"
+          className="absolute bottom-2 left-1/2 flex size-6 -translate-x-1/2 items-center justify-center rounded-full border border-[var(--helm-border)] bg-[var(--helm-widget-background)] p-0 hover:bg-[var(--helm-list-hover)]"
           onClick={scrollToBottom}
           type="button"
         >

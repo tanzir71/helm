@@ -74,7 +74,7 @@ in-extension capability review below.
 - [x] Accessibility pass per §3.11 (keyboard traversal test in Electron suite)
 - [x] Light/dark/high-contrast verified via the existing theming test extended to new components
 - [x] `pnpm verify` green; core coverage still ≥ 70%; zero `any` introduced
-- [x] §4 screenshot checklist + a live smoke check of web_search/web_fetch/explore_code listed
+- [ ] §4 screenshot checklist + a live smoke check of web_search/web_fetch/explore_code listed
       under `## Awaiting human review` with repro steps **[HUMAN-GATE]**
 
 ## Awaiting human review
@@ -175,3 +175,9 @@ Repro:
   introduced. A live DuckDuckGo query returned three official-doc results and guarded fetch returned
   20,236 characters with the untrusted-content wrapper; final visual and in-extension smoke checks
   remain under the human gate above.
+- [2026-07-16] R7.1 completion audit closed the remaining automatable parity gaps: explicit and
+  automatic context now render as wrapping chips, Settings ordering/feedback and code-graph status
+  match the spec, web/tool cards expose useful wrapped summaries, and separated diff hunks count
+  accurately. `pnpm verify` passes with 74 core, 30 webview, and 14 extension tests at 83.04% core
+  coverage; Electron is 7/7, recorded eval tool-call success is 100%, and the packaged 50.6 MB VSIX
+  contains all eleven skills plus the bundled CodeGraph runtime. The human gate remains unchecked.

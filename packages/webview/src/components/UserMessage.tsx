@@ -6,17 +6,34 @@ export interface UserMessageProps {
   message: ChatMessage;
 }
 
-function extractContext(text: string): string[] {
-  return text.match(/@(file|folder):(?:"[^"]+"|[^\s]+)/gu) ?? [];
+export interface ParsedUserMessage {
+  context: string[];
+  text: string;
+}
+
+const CONTEXT_REFERENCE = /@(file|folder):(?:"[^"]+"|[^\s]+)/gu;
+
+export function parseUserMessage(text: string, attachedContext: string[] = []): ParsedUserMessage {
+  const context = [...new Set([...(text.match(CONTEXT_REFERENCE) ?? []), ...attachedContext])];
+  const visibleText = text
+    .replace(CONTEXT_REFERENCE, '')
+    .replace(/[ \t]+\n/gu, '\n')
+    .replace(/\n[ \t]+/gu, '\n')
+    .replace(/[ \t]{2,}/gu, ' ')
+    .replace(/\n{3,}/gu, '\n\n')
+    .trim();
+  return { context, text: visibleText };
 }
 
 export function UserMessage({ message }: UserMessageProps): React.JSX.Element {
-  const context = extractContext(message.text);
+  const { context, text } = parseUserMessage(message.text, message.context);
   return (
     <article className="ml-auto flex w-full max-w-[85%] min-w-0 flex-col items-end gap-1">
-      <div className="max-w-full whitespace-pre-wrap break-words rounded-[var(--helm-radius-control)] bg-[var(--helm-user-message-background)] p-2">
-        {message.text}
-      </div>
+      {text && (
+        <div className="max-w-full whitespace-pre-wrap break-words rounded-[var(--helm-radius-control)] bg-[var(--helm-user-message-background)] p-2">
+          {text}
+        </div>
+      )}
       {context.length > 0 && (
         <div className="flex max-w-full flex-wrap justify-end gap-1">
           {context.map((reference) => (
@@ -25,7 +42,7 @@ export function UserMessage({ message }: UserMessageProps): React.JSX.Element {
               key={reference}
             >
               <Icon name={reference.startsWith('@folder:') ? 'folder' : 'file'} />
-              <span className="truncate">{reference}</span>
+              <span className="min-w-0 break-all">{reference}</span>
             </span>
           ))}
         </div>

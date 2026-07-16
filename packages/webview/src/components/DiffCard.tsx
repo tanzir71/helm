@@ -14,6 +14,11 @@ export interface DiffSummary {
   removed: number;
 }
 
+interface DiffOperation {
+  kind: 'added' | 'equal' | 'removed';
+  text: string;
+}
+
 export function summarizeDiff(before: string, after: string): DiffSummary {
   const beforeLines = before ? before.split(/\r?\n/u) : [];
   const afterLines = after ? after.split(/\r?\n/u) : [];
@@ -33,16 +38,104 @@ export function summarizeDiff(before: string, after: string): DiffSummary {
   ) {
     suffix += 1;
   }
-  const removedLines = beforeLines.slice(prefix, beforeLines.length - suffix);
-  const addedLines = afterLines.slice(prefix, afterLines.length - suffix);
-  return {
-    added: addedLines.length,
-    removed: removedLines.length,
-    preview: [
-      ...removedLines.map((text) => ({ kind: 'removed' as const, text })),
-      ...addedLines.map((text) => ({ kind: 'added' as const, text })),
-    ].slice(0, 8),
+  const operations = diffLines(
+    beforeLines.slice(prefix, beforeLines.length - suffix),
+    afterLines.slice(prefix, afterLines.length - suffix),
+  );
+  const preview: DiffSummary['preview'] = [];
+  let added = 0;
+  let removed = 0;
+  let hunk: DiffSummary['preview'] = [];
+  const flushHunk = () => {
+    if (hunk.length === 0) return;
+    const changed = [
+      ...hunk.filter((operation) => operation.kind === 'removed'),
+      ...hunk.filter((operation) => operation.kind === 'added'),
+    ];
+    for (const operation of changed) {
+      if (preview.length < 8) preview.push({ kind: operation.kind, text: operation.text });
+    }
+    hunk = [];
   };
+  for (const operation of operations) {
+    if (operation.kind === 'equal') {
+      flushHunk();
+      continue;
+    }
+    if (operation.kind === 'added') added += 1;
+    else removed += 1;
+    hunk.push({ kind: operation.kind, text: operation.text });
+  }
+  flushHunk();
+  return {
+    added,
+    removed,
+    preview,
+  };
+}
+
+function diffLines(before: string[], after: string[]): DiffOperation[] {
+  if (before.length === 0) return after.map((text) => ({ kind: 'added' as const, text }));
+  if (after.length === 0) return before.map((text) => ({ kind: 'removed' as const, text }));
+
+  const maxDistance = before.length + after.length;
+  const frontier = new Map<number, number>([[1, 0]]);
+  const trace: Array<Map<number, number>> = [];
+
+  for (let distance = 0; distance <= maxDistance; distance += 1) {
+    trace.push(new Map(frontier));
+    for (let diagonal = -distance; diagonal <= distance; diagonal += 2) {
+      const down = frontier.get(diagonal + 1) ?? Number.NEGATIVE_INFINITY;
+      const right = frontier.get(diagonal - 1) ?? Number.NEGATIVE_INFINITY;
+      let x = diagonal === -distance || (diagonal !== distance && right < down) ? down : right + 1;
+      let y = x - diagonal;
+      while (x < before.length && y < after.length && before[x] === after[y]) {
+        x += 1;
+        y += 1;
+      }
+      frontier.set(diagonal, x);
+      if (x >= before.length && y >= after.length) return backtrackDiff(trace, before, after);
+    }
+  }
+  return [];
+}
+
+function backtrackDiff(
+  trace: Array<Map<number, number>>,
+  before: string[],
+  after: string[],
+): DiffOperation[] {
+  const operations: DiffOperation[] = [];
+  let x = before.length;
+  let y = after.length;
+
+  for (let distance = trace.length - 1; distance >= 0; distance -= 1) {
+    const frontier = trace[distance]!;
+    const diagonal = x - y;
+    const down = frontier.get(diagonal + 1) ?? Number.NEGATIVE_INFINITY;
+    const right = frontier.get(diagonal - 1) ?? Number.NEGATIVE_INFINITY;
+    const previousDiagonal =
+      diagonal === -distance || (diagonal !== distance && right < down)
+        ? diagonal + 1
+        : diagonal - 1;
+    const previousX = frontier.get(previousDiagonal) ?? 0;
+    const previousY = previousX - previousDiagonal;
+
+    while (x > previousX && y > previousY) {
+      operations.push({ kind: 'equal', text: before[x - 1]! });
+      x -= 1;
+      y -= 1;
+    }
+    if (distance === 0) break;
+    if (x === previousX) {
+      operations.push({ kind: 'added', text: after[y - 1]! });
+      y -= 1;
+    } else {
+      operations.push({ kind: 'removed', text: before[x - 1]! });
+      x -= 1;
+    }
+  }
+  return operations.reverse();
 }
 
 export function DiffCard({ diff, onDecide, onOpen }: DiffCardProps): React.JSX.Element {

@@ -20,3 +20,10 @@ export function selectTokenLabel(state: UiState): string {
 export function selectVisibleSuggestions(state: UiState) {
   return state.runState === 'idle' ? state.suggestions.slice(0, 3) : [];
 }
+
+export function selectCodeGraphStatus(state: UiState): string | undefined {
+  if (!state.codeGraphSettings.indexing) return undefined;
+  const progress = state.codeGraphSettings.progress;
+  if (!progress || progress.total <= 0) return 'Indexing workspace…';
+  return `Indexing workspace… ${progress.current.toLocaleString()}/${progress.total.toLocaleString()} files`;
+}

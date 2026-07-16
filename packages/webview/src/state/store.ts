@@ -385,11 +385,6 @@ function reduceHostMessage(state: UiState, message: HostToWebviewMessage): UiSta
           ...state.connectionResults,
           [message.provider]: { ok: message.ok, message: message.message },
         },
-        ...nextNotice(
-          state,
-          message.ok ? 'info' : 'error',
-          message.ok ? message.message : `Could not connect: ${message.message}`,
-        ),
       };
     case 'tokenUsage':
       return {

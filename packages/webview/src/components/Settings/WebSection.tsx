@@ -148,7 +148,7 @@ export function WebSection({
         ) : (
           settings.allowedDomains.map((domain) => (
             <div className="flex min-w-0 items-center gap-2" key={domain}>
-              <code className="min-w-0 flex-1 truncate">{domain}</code>
+              <code className="min-w-0 flex-1 break-all">{domain}</code>
               <button
                 aria-label={`Remove allowed domain ${domain}`}
                 className="border-0 bg-transparent p-1 hover:bg-[var(--helm-toolbar-hover)]"

@@ -90,7 +90,7 @@ export function SettingsView({
   webSettings,
 }: SettingsViewProps): React.JSX.Element {
   return (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-[var(--helm-panel-background)]">
+    <section className="flex min-h-0 min-w-0 flex-1 animate-in flex-col bg-[var(--helm-panel-background)] duration-[var(--helm-duration-fast)] fade-in slide-in-from-right-1">
       <header className="flex h-8 shrink-0 items-center border-b border-[var(--helm-border)] px-2">
         <button
           className="flex items-center gap-1 rounded-[var(--helm-radius-control)] border-0 bg-transparent px-1.5 py-1 hover:bg-[var(--helm-toolbar-hover)]"
@@ -122,13 +122,6 @@ export function SettingsView({
           onTest={onTestWebSearch}
           settings={webSettings}
         />
-        <SkillsSection
-          focused={focusSection === 'skills'}
-          onAddFolder={onAddSkillsFolder}
-          onAddGit={onAddSkillsGit}
-          onToggle={onToggleSkill}
-          settings={skillsSettings}
-        />
         <CodeGraphSection
           onDelete={onDeleteCodeGraph}
           onIndex={onIndexCodeGraph}
@@ -136,6 +129,13 @@ export function SettingsView({
           onReindex={onReindexCodeGraph}
           onToggle={onSaveCodeGraphSettings}
           settings={codeGraphSettings}
+        />
+        <SkillsSection
+          focused={focusSection === 'skills'}
+          onAddFolder={onAddSkillsFolder}
+          onAddGit={onAddSkillsGit}
+          onToggle={onToggleSkill}
+          settings={skillsSettings}
         />
       </div>
     </section>

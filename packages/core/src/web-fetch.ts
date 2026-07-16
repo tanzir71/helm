@@ -110,7 +110,10 @@ export function htmlToReadableMarkdown(html: string, url: URL): string {
     filter: 'table',
     replacement: (_content, node) => tableToMarkdown(node as HTMLElement),
   });
-  return turndown.turndown(content).trim();
+  const markdown = turndown.turndown(content).trim();
+  const title = article?.title?.replace(/\s+/gu, ' ').trim();
+  if (!title || markdown.startsWith(`# ${title}`)) return markdown;
+  return `# ${title}\n\n${markdown}`.trim();
 }
 
 export function wrapUntrustedWebContent(url: URL, content: string): string {

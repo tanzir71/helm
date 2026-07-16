@@ -24,6 +24,7 @@ import { ToolGroupCard } from './components/ToolGroupCard';
 import { Transcript } from './components/Transcript';
 import { groupConsecutiveTools } from './components/tool-groups';
 import {
+  selectCodeGraphStatus,
   selectIsRunning,
   selectStreamingMessage,
   selectTokenLabel,
@@ -67,12 +68,14 @@ export function App(): React.JSX.Element {
     .reverse()
     .find((tool) => tool.ok === undefined && !tool.approval);
   const toolDisplayItems = groupConsecutiveTools(state.tools);
+  const codeGraphStatus = selectCodeGraphStatus(state);
   const status =
-    running && (pendingTool || !streamingMessage?.text)
+    codeGraphStatus ??
+    (running && (pendingTool || !streamingMessage?.text)
       ? pendingTool
         ? statusForTool(pendingTool.name)
         : 'Thinking…'
-      : undefined;
+      : undefined);
 
   useEffect(() => {
     const receive = (event: MessageEvent<HostToWebviewMessage>) => {

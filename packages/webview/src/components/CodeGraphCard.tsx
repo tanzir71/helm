@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { MessageResponse } from './ai-elements/message';
 import { Card } from './Card';
 import { Icon } from './Icon';
+import { shortToolOutput } from './tool-output';
 
 export interface CodeGraphCardProps {
   tool: UiTool;
@@ -31,9 +32,16 @@ export function CodeGraphCard({ tool }: CodeGraphCardProps): React.JSX.Element {
   const [expanded, setExpanded] = useState(false);
   const input = typeof tool.input === 'object' && tool.input !== null ? tool.input : {};
   const query = Reflect.get(input, 'query');
-  const output = typeof tool.output === 'string' ? tool.output : '';
+  const output =
+    typeof tool.output === 'string'
+      ? tool.output
+      : tool.output === undefined
+        ? ''
+        : JSON.stringify(tool.output, null, 2);
   const symbol = typeof query === 'string' ? primarySymbol(query) : undefined;
   const related = output ? relatedSymbolCount(output, symbol) : 0;
+  const failed = tool.ok === false;
+  const failure = failed ? shortToolOutput(tool.output) : undefined;
 
   return (
     <Card>
@@ -43,15 +51,25 @@ export function CodeGraphCard({ tool }: CodeGraphCardProps): React.JSX.Element {
         onClick={() => setExpanded((current) => !current)}
         type="button"
       >
-        <Icon name="type-hierarchy" />
-        <span className="min-w-0 flex-1 break-words">
-          Explored code graph
-          {symbol ? (
-            <>
-              : <code>{symbol}</code>
-            </>
-          ) : null}
-          {related > 0 ? ` + ${related} related symbols` : ''}
+        <Icon
+          className={failed ? 'text-[var(--helm-warning)]' : ''}
+          name={failed ? 'warning' : 'type-hierarchy'}
+        />
+        <span className="grid min-w-0 flex-1 gap-0.5">
+          <span className="break-words">
+            Explored code graph
+            {symbol ? (
+              <>
+                : <code>{symbol}</code>
+              </>
+            ) : null}
+            {related > 0 ? ` + ${related} related symbols` : ''}
+          </span>
+          {failure && (
+            <span className="break-words text-[length:var(--helm-font-size-meta)] text-[var(--helm-description-foreground)]">
+              {failure}
+            </span>
+          )}
         </span>
         {tool.ok === undefined && (
           <span className="mt-1 size-1.5 animate-pulse rounded-full bg-[var(--helm-description-foreground)]" />

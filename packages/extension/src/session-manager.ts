@@ -34,6 +34,7 @@ import * as vscode from 'vscode';
 
 import { createRestoreMessages } from './restore-messages.js';
 import { CodeGraphService } from './codegraph-service.js';
+import { fileContextReference, workspaceRelativePath } from './message-context.js';
 import {
   importSkillsFolder,
   importSkillsFromGit,
@@ -669,11 +670,17 @@ export class SessionManager implements vscode.Disposable {
     }
 
     await this.autoCompactIfNeeded(resolvedModel);
+    const activeEditor = vscode.window.activeTextEditor;
+    const activeFile =
+      activeEditor && this.session.autoContext !== false
+        ? workspaceRelativePath(this.workspaceRoot.fsPath, activeEditor.document.uri.fsPath)
+        : undefined;
     const userMessage: ChatMessage = {
       id: item.id,
       role: 'user',
       text: item.text,
       createdAt: Date.now(),
+      ...(activeFile ? { context: [fileContextReference(activeFile)] } : {}),
     };
     this.session.messages.push(userMessage);
     this.post({ type: 'messageAdded', message: userMessage });
@@ -1107,10 +1114,12 @@ export class SessionManager implements vscode.Disposable {
     const sections: string[] = [];
     const editor = vscode.window.activeTextEditor;
     if (editor && this.session.autoContext !== false) {
-      const relative = path.relative(this.workspaceRoot.fsPath, editor.document.uri.fsPath);
-      sections.push(`Active file: ${relative}`);
-      const selection = editor.document.getText(editor.selection);
-      if (selection) sections.push(`Active selection:\n${selection.slice(0, 20_000)}`);
+      const relative = workspaceRelativePath(this.workspaceRoot.fsPath, editor.document.uri.fsPath);
+      if (relative) {
+        sections.push(`Active file: ${relative}`);
+        const selection = editor.document.getText(editor.selection);
+        if (selection) sections.push(`Active selection:\n${selection.slice(0, 20_000)}`);
+      }
     }
     if (text.includes('@problems')) {
       const diagnostics = vscode.languages

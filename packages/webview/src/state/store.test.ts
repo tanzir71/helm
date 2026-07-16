@@ -100,5 +100,6 @@ describe('uiReducer', () => {
       ok: false,
       message: 'Invalid API key',
     });
+    expect(result.notice).toBeUndefined();
   });
 });

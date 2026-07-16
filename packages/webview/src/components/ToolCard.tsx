@@ -5,6 +5,7 @@ import { ApprovalCard } from './ApprovalCard';
 import { Card } from './Card';
 import { CodeGraphCard } from './CodeGraphCard';
 import { Icon, type IconName } from './Icon';
+import { shortToolOutput } from './tool-output';
 import { WebCard } from './WebCard';
 
 export interface ToolCardProps {
@@ -28,6 +29,7 @@ export function friendlyToolName(name: string, input: unknown): string {
   const record = typeof input === 'object' && input !== null ? input : {};
   const pathValue = Reflect.get(record, 'path');
   const commandValue = Reflect.get(record, 'command');
+  const patternValue = Reflect.get(record, 'pattern');
   const queryValue = Reflect.get(record, 'query');
   const skillName = Reflect.get(record, 'name');
   const detail =
@@ -37,9 +39,11 @@ export function friendlyToolName(name: string, input: unknown): string {
         ? ` \`${pathValue}\``
         : typeof commandValue === 'string'
           ? ` \`${commandValue}\``
-          : typeof queryValue === 'string'
-            ? ` “${queryValue}”`
-            : '';
+          : typeof patternValue === 'string'
+            ? ` \`${patternValue}\``
+            : typeof queryValue === 'string'
+              ? ` “${queryValue}”`
+              : '';
   const labels: Record<string, string> = {
     read_file: 'Read',
     list_dir: 'Listed folder',
@@ -55,6 +59,12 @@ export function friendlyToolName(name: string, input: unknown): string {
     explore_code: 'Explored code graph:',
   };
   return `${labels[name] ?? name}${detail}`;
+}
+
+export function toolResultSummary(name: string, output: unknown): string | undefined {
+  if (typeof output !== 'string' || !['glob', 'grep', 'list_dir'].includes(name)) return undefined;
+  const count = output.split(/\r?\n/u).filter((line) => line.trim()).length;
+  return `${count} ${name === 'grep' ? (count === 1 ? 'result' : 'results') : count === 1 ? 'file' : 'files'}`;
 }
 
 export function ToolCard({
@@ -80,6 +90,8 @@ export function ToolCard({
   if (tool.name === 'explore_code') return <CodeGraphCard tool={tool} />;
 
   const failed = tool.ok === false;
+  const failure = failed ? shortToolOutput(tool.output) : undefined;
+  const resultSummary = tool.ok === true ? toolResultSummary(tool.name, tool.output) : undefined;
   return (
     <Card>
       <button
@@ -94,6 +106,8 @@ export function ToolCard({
         />
         <span className="min-w-0 flex-1 break-words">
           {friendlyToolName(tool.name, tool.input)}
+          {resultSummary ? ` — ${resultSummary}` : ''}
+          {failure ? ` — ${failure}` : ''}
         </span>
         {tool.ok === undefined && (
           <span className="size-1.5 animate-pulse rounded-full bg-[var(--helm-description-foreground)]" />

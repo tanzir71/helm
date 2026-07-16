@@ -43,6 +43,15 @@ describe('web fetch safety', () => {
     expect(markdown).toContain('| Name | Value |');
   });
 
+  it('preserves the document title for the fetch card subtitle', () => {
+    const markdown = htmlToReadableMarkdown(
+      '<html><head><title>API Reference</title></head><body><article><p>Details.</p></article></body></html>',
+      new URL('https://example.com/docs'),
+    );
+    expect(markdown).toMatch(/^# API Reference\n\n/u);
+    expect(markdown).toContain('Details.');
+  });
+
   it('truncates at 20k characters and wraps content as untrusted', () => {
     const output = wrapUntrustedWebContent(new URL('https://example.com/docs'), 'x'.repeat(21_000));
     expect(output).toContain(
