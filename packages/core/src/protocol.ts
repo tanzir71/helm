@@ -51,6 +51,28 @@ export interface WebSettingsState {
   providerKeys: Record<string, { configured: boolean; masked: string }>;
 }
 
+export type CodeGraphRuntime = 'in-process' | 'cli';
+
+export interface CodeGraphProgress {
+  phase: 'scanning' | 'parsing' | 'storing' | 'resolving' | 'starting';
+  current: number;
+  total: number;
+  currentFile?: string;
+}
+
+export interface CodeGraphSettingsState {
+  enabled: boolean;
+  indexed: boolean;
+  indexing: boolean;
+  runtime: CodeGraphRuntime;
+  fileCount: number;
+  symbolCount: number;
+  edgeCount: number;
+  lastSync?: number;
+  progress?: CodeGraphProgress;
+  error?: string;
+}
+
 export type WebviewToHostMessage =
   | { type: 'webviewReady' }
   | { type: 'userMessage'; id: string; text: string }
@@ -77,6 +99,12 @@ export type WebviewToHostMessage =
   | { type: 'removeWebApiKey'; provider: WebSearchProviderId }
   | { type: 'testWebSearch'; provider: WebSearchProviderId; key?: string }
   | { type: 'removeAllowedDomain'; domain: string }
+  | { type: 'saveCodeGraphSettings'; enabled: boolean }
+  | { type: 'initializeCodeGraph'; addToGitignore: boolean }
+  | { type: 'dismissCodeGraphConsent' }
+  | { type: 'reindexCodeGraph' }
+  | { type: 'requestDeleteCodeGraphIndex' }
+  | { type: 'deleteCodeGraphIndex' }
   | { type: 'openExternal'; url: string }
   | {
       type: 'testConnection';
@@ -147,12 +175,16 @@ export type HostToWebviewMessage =
       hasApiKey: boolean;
       providerKeys: Record<string, ProviderKeyState>;
       web: WebSettingsState;
+      codeGraph: CodeGraphSettingsState;
     }
   | { type: 'modelsUpdated'; provider: string; models: Array<{ id: string; label: string }> }
   | { type: 'contextItems'; kind: 'file' | 'folder'; items: string[] }
   | { type: 'goalChanged'; goal?: string }
   | { type: 'planChanged'; plan?: PlanState }
   | { type: 'fullAccessConfirmationRequired' }
+  | { type: 'codeGraphConsentRequired'; gitRepository: boolean }
+  | { type: 'codeGraphDeleteConfirmationRequired' }
+  | { type: 'codeGraphProgress'; progress: CodeGraphProgress }
   | { type: 'error'; message: string; action?: string };
 
 export function isWebviewToHostMessage(value: unknown): value is WebviewToHostMessage {

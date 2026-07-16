@@ -53,6 +53,7 @@ export interface AgentRunOptions {
   context?: string;
   reasoningEffort?: 'low' | 'medium' | 'high';
   webEnabled?: boolean;
+  codeGraphEnabled?: boolean;
 }
 
 export interface AgentRunResult {
@@ -78,7 +79,10 @@ export class AgentRunner {
               callbacks.onLoopWarning?.(warning, pause);
             },
           },
-          { webEnabled: options.webEnabled === true },
+          {
+            webEnabled: options.webEnabled === true,
+            codeGraphEnabled: options.codeGraphEnabled === true,
+          },
         )
       : undefined;
     const system = buildSystemPrompt({
@@ -90,6 +94,7 @@ export class AgentRunner {
       ...(options.planStep ? { planStep: options.planStep } : {}),
       ...(options.context ? { context: options.context } : {}),
       ...(options.webEnabled ? { webEnabled: true } : {}),
+      ...(options.codeGraphEnabled ? { codeGraphEnabled: true } : {}),
     });
     const messages: ModelMessage[] = [
       ...(options.history ?? []).map((message): ModelMessage => ({
@@ -110,6 +115,7 @@ export class AgentRunner {
               mode,
               options.resolvedModel.profile.toolCalling.maxToolsAdvised,
               options.webEnabled === true,
+              options.codeGraphEnabled === true,
             ),
             experimental_repairToolCall: async ({ toolCall }) => {
               const repaired = repairJson(toolCall.input);
@@ -216,8 +222,13 @@ function stripReasoningFromStepMessages(messages: ModelMessage[]): ModelMessage[
   return changed ? sanitized : messages;
 }
 
-function advisedToolNames(mode: ApprovalMode, limit: number, webEnabled: boolean) {
-  const allowed = allowedToolNames(mode, webEnabled);
+function advisedToolNames(
+  mode: ApprovalMode,
+  limit: number,
+  webEnabled: boolean,
+  codeGraphEnabled: boolean,
+) {
+  const allowed = allowedToolNames(mode, webEnabled, codeGraphEnabled);
   if (allowed.length <= limit) return allowed;
   return allowed.filter((name) => name !== 'fetch_url').slice(0, limit);
 }

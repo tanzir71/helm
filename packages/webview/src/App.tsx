@@ -9,6 +9,7 @@ import {
 import { useCallback, useEffect, useReducer } from 'react';
 
 import { Composer, type SubmitKind } from './components/Composer/Composer';
+import { CodeGraphNotice } from './components/CodeGraphNotice';
 import { QueueStrip } from './components/Composer/QueueStrip';
 import { SuggestionRow } from './components/Composer/SuggestionRow';
 import { DiffGroup } from './components/DiffGroup';
@@ -100,6 +101,8 @@ export function App(): React.JSX.Element {
     const confirmed = window.confirm(confirmation.message);
     if (confirmation.kind === 'fullAccess') {
       vscode.postMessage({ type: 'confirmFullAccess', confirmed });
+    } else if (confirmation.kind === 'deleteCodeGraph') {
+      if (confirmed) vscode.postMessage({ type: 'deleteCodeGraphIndex' });
     } else if (confirmed) {
       vscode.postMessage({ type: 'clearSession' });
     }
@@ -191,6 +194,16 @@ export function App(): React.JSX.Element {
           onRemoveAllowedDomain={(domain) =>
             vscode.postMessage({ type: 'removeAllowedDomain', domain })
           }
+          codeGraphSettings={state.codeGraphSettings}
+          onDeleteCodeGraph={() => vscode.postMessage({ type: 'requestDeleteCodeGraphIndex' })}
+          onIndexCodeGraph={(addToGitignore) =>
+            vscode.postMessage({ type: 'initializeCodeGraph', addToGitignore })
+          }
+          onOpenExternal={(url) => vscode.postMessage({ type: 'openExternal', url })}
+          onReindexCodeGraph={() => vscode.postMessage({ type: 'reindexCodeGraph' })}
+          onSaveCodeGraphSettings={(enabled) =>
+            vscode.postMessage({ type: 'saveCodeGraphSettings', enabled })
+          }
           onRemoveApiKey={(provider) => vscode.postMessage({ type: 'removeApiKey', provider })}
           onRemoveWebApiKey={(provider) =>
             vscode.postMessage({ type: 'removeWebApiKey', provider })
@@ -224,6 +237,20 @@ export function App(): React.JSX.Element {
         onOpenSettings={() => dispatch({ type: 'settingsVisibilityChanged', open: true })}
       />
       {state.settings.goal && <GoalBanner goal={state.settings.goal} />}
+      {state.codeGraphConsent && (
+        <CodeGraphNotice
+          gitRepository={state.codeGraphConsent.gitRepository}
+          indexing={state.codeGraphSettings.indexing}
+          onDismiss={() => {
+            vscode.postMessage({ type: 'dismissCodeGraphConsent' });
+            dispatch({ type: 'codeGraphConsentDismissed' });
+          }}
+          onIndex={(addToGitignore) => {
+            vscode.postMessage({ type: 'initializeCodeGraph', addToGitignore });
+            dispatch({ type: 'codeGraphConsentDismissed' });
+          }}
+        />
+      )}
       {state.notice && (
         <Notice
           notice={state.notice}

@@ -85,6 +85,10 @@ importers:
         version: 4.23.1
 
   packages/extension:
+    dependencies:
+      '@colbymchenry/codegraph':
+        specifier: ^1.4.1
+        version: 1.4.1
     devDependencies:
       '@helm/core':
         specifier: workspace:*
@@ -458,6 +462,40 @@ packages:
 
   '@chevrotain/types@11.1.2':
     resolution: {integrity: sha512-U+HFai5+zmJCkK86QsaJtoITlboZHBqrVketcO2ROv865xfCMSFpELQoz1GkX5GzME8pTa+3kbKrZHQtI0gdbw==}
+
+  '@colbymchenry/codegraph-darwin-arm64@1.4.1':
+    resolution: {integrity: sha512-USSpExjuxZWN0OeNexZp2V5fCfOI4ZekqE79CJiBdGdPbqGTB+857ImIqzWGyF/rAyyED94Wc0Cd82t+uWD30w==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@colbymchenry/codegraph-darwin-x64@1.4.1':
+    resolution: {integrity: sha512-syLC7QPsNui2hPrK58El0XQrjjdSYhsoKS5i26ieD8DVrb0adzFQrBRP8qId/wfGp078xdC54rdKvqgmbIL1WQ==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@colbymchenry/codegraph-linux-arm64@1.4.1':
+    resolution: {integrity: sha512-XC6GJ9/fTicW9CE3k2fOcUOcbtDU8mS53t+PUfzq3Py9+JiX3PtJgtBB8bmf6e45NZUF5foaLUwFXfxTTl961g==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@colbymchenry/codegraph-linux-x64@1.4.1':
+    resolution: {integrity: sha512-bjfa+0IyjbxpZz7ghznN4qMPoYVSiZafeZu/rXGdg3VI+kEPOPZrk2vmtWIU9tBPGVJbeU2Kwa/0Z2DkUGOJ9A==}
+    cpu: [x64]
+    os: [linux]
+
+  '@colbymchenry/codegraph-win32-arm64@1.4.1':
+    resolution: {integrity: sha512-mb5bFDhwcP49U0P2IBRhH1O5ZmnlgE8lIXTlg2dqpfLeL+XfxzyeJ+i4I0KU0h1hlNWP/u3d2k+1EGem2swDBw==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@colbymchenry/codegraph-win32-x64@1.4.1':
+    resolution: {integrity: sha512-ipN6WvTKa0cSXIL6DTdACq57WnNYTjVq2wtC5uPT8F22o6Ucbcu3/w3OzKkkfwP4mkXv2cDMbuvExbnYNULyuw==}
+    cpu: [x64]
+    os: [win32]
+
+  '@colbymchenry/codegraph@1.4.1':
+    resolution: {integrity: sha512-xZayboJt6T3QBzBsBsI0eJ3J/tN4vYs6LMuvrxJVdM71yQFjrFKFeV3KsbicAgkj6AHnTXxUNk26g9BYwkNMgg==}
+    hasBin: true
 
   '@dotenvx/dotenvx@1.75.1':
     resolution: {integrity: sha512-/BITOC9dmS/edY2zQwZNicQ059O6RKabtQfyEafV0nGtfYRNHYy1DIPiYVcov40+tob9hfmBnbR963dS+EQ1DQ==}
@@ -5942,6 +5980,33 @@ snapshots:
   '@braintree/sanitize-url@7.1.2': {}
 
   '@chevrotain/types@11.1.2': {}
+
+  '@colbymchenry/codegraph-darwin-arm64@1.4.1':
+    optional: true
+
+  '@colbymchenry/codegraph-darwin-x64@1.4.1':
+    optional: true
+
+  '@colbymchenry/codegraph-linux-arm64@1.4.1':
+    optional: true
+
+  '@colbymchenry/codegraph-linux-x64@1.4.1':
+    optional: true
+
+  '@colbymchenry/codegraph-win32-arm64@1.4.1':
+    optional: true
+
+  '@colbymchenry/codegraph-win32-x64@1.4.1':
+    optional: true
+
+  '@colbymchenry/codegraph@1.4.1':
+    optionalDependencies:
+      '@colbymchenry/codegraph-darwin-arm64': 1.4.1
+      '@colbymchenry/codegraph-darwin-x64': 1.4.1
+      '@colbymchenry/codegraph-linux-arm64': 1.4.1
+      '@colbymchenry/codegraph-linux-x64': 1.4.1
+      '@colbymchenry/codegraph-win32-arm64': 1.4.1
+      '@colbymchenry/codegraph-win32-x64': 1.4.1
 
   '@dotenvx/dotenvx@1.75.1':
     dependencies:

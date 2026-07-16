@@ -1,5 +1,6 @@
 import type {
   ChatMessage,
+  CodeGraphSettingsState,
   HostToWebviewMessage,
   PlanState,
   ProviderKeyState,
@@ -39,7 +40,8 @@ export interface UiConnectionResult {
 
 export type PendingConfirmation =
   | { id: number; kind: 'fullAccess'; message: string }
-  | { id: number; kind: 'clearSession'; message: string };
+  | { id: number; kind: 'clearSession'; message: string }
+  | { id: number; kind: 'deleteCodeGraph'; message: string };
 
 export interface UiState {
   version: string | undefined;
@@ -64,6 +66,8 @@ export interface UiState {
   providerKeyStates: Record<string, ProviderKeyState>;
   connectionResults: Record<string, UiConnectionResult>;
   webSettings: WebSettingsState;
+  codeGraphSettings: CodeGraphSettingsState;
+  codeGraphConsent: { gitRepository: boolean } | undefined;
   pendingConfirmation: PendingConfirmation | undefined;
   eventSequence: number;
 }
@@ -105,6 +109,16 @@ export const initialUiState: UiState = {
     provider: 'duckduckgo',
     providerKeys: {},
   },
+  codeGraphSettings: {
+    enabled: true,
+    indexed: false,
+    indexing: false,
+    runtime: 'cli',
+    fileCount: 0,
+    symbolCount: 0,
+    edgeCount: 0,
+  },
+  codeGraphConsent: undefined,
   pendingConfirmation: undefined,
   eventSequence: 0,
 };
@@ -119,7 +133,8 @@ export type UiAction =
   | { type: 'connectionTestStarted'; provider: string }
   | { type: 'toolApprovalHandled'; id: string }
   | { type: 'diffHandled'; id: string }
-  | { type: 'confirmationHandled'; id: number };
+  | { type: 'confirmationHandled'; id: number }
+  | { type: 'codeGraphConsentDismissed' };
 
 function upsertMessage(messages: ChatMessage[], next: ChatMessage): ChatMessage[] {
   const index = messages.findIndex((message) => message.id === next.id);
@@ -301,7 +316,32 @@ function reduceHostMessage(state: UiState, message: HostToWebviewMessage): UiSta
         hasApiKey: message.hasApiKey,
         providerKeyStates: message.providerKeys,
         webSettings: message.web,
+        codeGraphSettings: message.codeGraph,
       };
+    case 'codeGraphProgress':
+      return {
+        ...state,
+        codeGraphSettings: {
+          ...state.codeGraphSettings,
+          indexing: true,
+          progress: message.progress,
+        },
+      };
+    case 'codeGraphConsentRequired':
+      return { ...state, codeGraphConsent: { gitRepository: message.gitRepository } };
+    case 'codeGraphDeleteConfirmationRequired': {
+      const id = state.eventSequence + 1;
+      return {
+        ...state,
+        eventSequence: id,
+        pendingConfirmation: {
+          id,
+          kind: 'deleteCodeGraph',
+          message:
+            'Delete the local .codegraph index for this workspace? Source files are not affected.',
+        },
+      };
+    }
     case 'modelsUpdated':
       return {
         ...state,
@@ -429,5 +469,7 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
       return state.pendingConfirmation?.id === action.id
         ? { ...state, pendingConfirmation: undefined }
         : state;
+    case 'codeGraphConsentDismissed':
+      return { ...state, codeGraphConsent: undefined };
   }
 }

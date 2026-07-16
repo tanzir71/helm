@@ -38,6 +38,21 @@ describe('recorded open-model eval fixtures', () => {
     ]);
     expect(assistantTurns.at(-1)?.answer).toContain('https://example.com/docs');
   });
+
+  it('answers an architecture question with one explore and zero file reads', async () => {
+    const fixture = JSON.parse(
+      await readFile(
+        new URL('../evals/fixtures/codegraph-architecture.json', import.meta.url),
+        'utf8',
+      ),
+    ) as ResearchFixture;
+    const tools = fixture.transcript
+      .filter((turn) => turn.role === 'assistant' && turn.tool)
+      .map((turn) => turn.tool);
+    expect(tools).toEqual(['explore_code']);
+    expect(tools).not.toContain('read_file');
+    expect(fixture.transcript.at(-1)?.answer).toContain('ExtensionToolHost');
+  });
 });
 
 function toolName(value: unknown): string | undefined {

@@ -22,6 +22,7 @@ export const TOOL_SCHEMAS = {
     max_results: z.number().int().min(1).max(8).optional(),
   }),
   web_fetch: z.object({ url: z.string().url() }),
+  explore_code: z.object({ query: z.string().min(1) }),
   use_skill: z.object({ name: z.string() }),
 } as const;
 
@@ -42,11 +43,17 @@ export interface ToolEventCallbacks {
   onLoopWarning?(warning: string, pause: boolean): void;
 }
 
-export function allowedToolNames(mode: ApprovalMode, webEnabled = false): ToolName[] {
+export function allowedToolNames(
+  mode: ApprovalMode,
+  webEnabled = false,
+  codeGraphEnabled = false,
+): ToolName[] {
   const webTools: ToolName[] = webEnabled ? ['web_search', 'web_fetch'] : [];
   if (mode === 'chat') return ['read_file', 'list_dir', 'glob', 'grep', ...webTools, 'use_skill'];
   return (Object.keys(TOOL_SCHEMAS) as ToolName[]).filter(
-    (name) => webEnabled || (name !== 'web_search' && name !== 'web_fetch'),
+    (name) =>
+      (webEnabled || (name !== 'web_search' && name !== 'web_fetch')) &&
+      (codeGraphEnabled || name !== 'explore_code'),
   );
 }
 
@@ -54,9 +61,10 @@ export function createAgentTools(
   host: ToolHost,
   mode: ApprovalMode,
   callbacks: ToolEventCallbacks = {},
-  options: { webEnabled?: boolean } = {},
+  options: { webEnabled?: boolean; codeGraphEnabled?: boolean } = {},
 ) {
   const webEnabled = options.webEnabled === true;
+  const codeGraphEnabled = options.codeGraphEnabled === true;
   const guard = new RepeatCallGuard();
   const execute = async (
     name: ToolName,
@@ -64,8 +72,8 @@ export function createAgentTools(
     callId: string,
     signal?: AbortSignal,
   ): Promise<unknown> => {
-    if (!allowedToolNames(mode, webEnabled).includes(name))
-      throw new Error(`${name} is unavailable in Chat mode.`);
+    if (!allowedToolNames(mode, webEnabled, codeGraphEnabled).includes(name))
+      throw new Error(`${name} is unavailable in the current mode or workspace.`);
     const repeat = guard.record(name, input);
     if (repeat.warning) callbacks.onLoopWarning?.(repeat.warning, repeat.pause);
     if (repeat.pause) throw new Error('Run paused after five identical consecutive tool calls.');
@@ -159,6 +167,13 @@ export function createAgentTools(
       execute: (input, options) =>
         execute('web_fetch', input, options.toolCallId, options.abortSignal),
     }),
+    explore_code: tool({
+      description:
+        'Explore the indexed code graph for relevant source, call paths, and change impact.',
+      inputSchema: feedbackSchema(TOOL_SCHEMAS.explore_code),
+      execute: (input, options) =>
+        execute('explore_code', input, options.toolCallId, options.abortSignal),
+    }),
     use_skill: tool({
       description: 'Load the full instructions for one discovered skill.',
       inputSchema: feedbackSchema(TOOL_SCHEMAS.use_skill),
@@ -170,6 +185,7 @@ export function createAgentTools(
     Reflect.deleteProperty(commonTools, 'web_search');
     Reflect.deleteProperty(commonTools, 'web_fetch');
   }
+  if (!codeGraphEnabled || mode === 'chat') Reflect.deleteProperty(commonTools, 'explore_code');
   return commonTools;
 }
 

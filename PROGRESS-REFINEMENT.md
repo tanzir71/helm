@@ -2,14 +2,14 @@
 
 ## Current
 
-R5 built-in code graph — embed codegraph behind one `explore_code` tool, implement the runtime
-version gate and index lifecycle, and prove graph-assisted discovery on a fixture repository.
+R6 bundled skills pack — install the eleven verbatim playbooks, add builtin precedence and
+enable/disable state, and replace the placeholder Skills settings section with the full manager.
 
-1. Verify the package API and add the Node-version/runtime selection layer.
-2. Register `explore_code` only when an index exists and add its system-prompt guidance.
-3. Implement consent, `.gitignore`, indexing/sync, re-index, and delete lifecycle controls.
-4. Complete Settings → Code graph and the graph activity card.
-5. Add fixture/eval coverage, run all gates, and commit R5.
+1. Copy the eleven §6.3 skills verbatim and extend the loader with a typed builtin source.
+2. Implement workspace > global > builtin precedence and persistent builtin enable/disable state.
+3. Add folder and Git-URL import plus the `/skills` entry point.
+4. Build the Skills manager UI and validate every builtin/cross-reference/tool name.
+5. Run the recorded eval and all R6 gates, then commit R6.
 
 ## Milestones
 
@@ -51,14 +51,14 @@ version gate and index lifecycle, and prove graph-assisted discovery on a fixtur
 
 ### R5 — Code graph
 
-- [ ] `@colbymchenry/codegraph` embedded with Node ≥22.5 in-process path + CLI-spawn fallback
+- [x] `@colbymchenry/codegraph` embedded with Node ≥22.5 in-process path + CLI-spawn fallback
       (version gate unit-tested)
-- [ ] `explore_code` single tool registered only when an index exists; system-prompt section per
+- [x] `explore_code` single tool registered only when an index exists; system-prompt section per
       §5.2.3
-- [ ] Index lifecycle: consent notice, `.gitignore` handling, auto-sync coexisting with checkpoints,
+- [x] Index lifecycle: consent notice, `.gitignore` handling, auto-sync coexisting with checkpoints,
       re-index/delete in Settings
-- [ ] Fixture-repo test: known callers returned; no-index behavior test
-- [ ] Eval fixture: architecture question answered via one `explore_code` call, zero `read_file`
+- [x] Fixture-repo test: known callers returned; no-index behavior test
+- [x] Eval fixture: architecture question answered via one `explore_code` call, zero `read_file`
       calls
 
 ### R6 — Skills pack
@@ -96,6 +96,10 @@ None yet.
   fallback.
 - Persist typed `command:` and `domain:` approval patterns in workspace state so command prefixes
   and fetch-domain permissions cannot collide.
+- Use CodeGraph 1.4.1's exact `ToolHandler` response in-process and `codegraph explore` stdout in
+  the fallback. The current CLI intentionally removed the older handoff's `--json` flag.
+- Copy the installed per-platform CodeGraph bundle into `dist/codegraph` only during packaging;
+  this keeps development builds small while ensuring the VSIX carries the fallback Node runtime.
 
 ## Log
 
@@ -116,3 +120,8 @@ None yet.
   web fetch are first-class tools; settings, approvals, untrusted-content handling, WebCard links,
   and the search→fetch→answer eval are green. Live DuckDuckGo search and TypeScript-doc fetch
   smoke checks passed, `pnpm verify` is green at 82.5% core coverage, and Electron remains 5/5.
+- [2026-07-16] R5 complete: CodeGraph 1.4.1 is embedded behind one conditional `explore_code`
+  capability with consent, lifecycle, auto-sync, Settings, and markdown card UI. The real ten-file
+  fixture returned both known callers and source, the recorded architecture flow used one explore
+  and zero reads, `pnpm verify` is green at 82.8% core coverage, Electron remains 5/5, and the
+  packaged 51 MB VSIX includes the self-contained CodeGraph runtime.

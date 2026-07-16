@@ -29,6 +29,18 @@ describe('agent tools', () => {
     expect(createAgentTools(host, 'agent', {}, { webEnabled: true })).toHaveProperty('web_search');
   });
 
+  it('registers one code-graph tool only for indexed Agent workspaces', () => {
+    const host: ToolHost = { execute: async () => 'ok' };
+    expect(createAgentTools(host, 'agent')).not.toHaveProperty('explore_code');
+    expect(createAgentTools(host, 'agent', {}, { codeGraphEnabled: true })).toHaveProperty(
+      'explore_code',
+    );
+    expect(createAgentTools(host, 'chat', {}, { codeGraphEnabled: true })).not.toHaveProperty(
+      'explore_code',
+    );
+    expect(allowedToolNames('agent', false, true)).toContain('explore_code');
+  });
+
   it('forwards validated calls and emits friendly lifecycle events', async () => {
     const execute = vi.fn(async () => '1: hello');
     const started = vi.fn();

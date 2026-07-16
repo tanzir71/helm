@@ -1,5 +1,6 @@
 import type {
   ApprovalMode,
+  CodeGraphSettingsState,
   ProviderKeyState,
   SessionSettings,
   WebSearchProviderId,
@@ -14,9 +15,15 @@ import { SkillsSection } from './SkillsSection';
 import { WebSection } from './WebSection';
 
 export interface SettingsViewProps {
+  codeGraphSettings: CodeGraphSettingsState;
   connectionResults: Record<string, { message: string; ok: boolean }>;
   modelsByProvider: Record<string, Array<{ id: string; label: string }>>;
   onBack: () => void;
+  onDeleteCodeGraph: () => void;
+  onIndexCodeGraph: (addToGitignore: boolean) => void;
+  onOpenExternal: (url: string) => void;
+  onReindexCodeGraph: () => void;
+  onSaveCodeGraphSettings: (enabled: boolean) => void;
   onRemoveApiKey: (provider: string) => void;
   onRemoveAllowedDomain: (domain: string) => void;
   onRemoveWebApiKey: (provider: WebSearchProviderId) => void;
@@ -48,9 +55,15 @@ export interface SettingsViewProps {
 }
 
 export function SettingsView({
+  codeGraphSettings,
   connectionResults,
   modelsByProvider,
   onBack,
+  onDeleteCodeGraph,
+  onIndexCodeGraph,
+  onOpenExternal,
+  onReindexCodeGraph,
+  onSaveCodeGraphSettings,
   onRemoveApiKey,
   onRemoveAllowedDomain,
   onRemoveWebApiKey,
@@ -99,7 +112,14 @@ export function SettingsView({
           settings={webSettings}
         />
         <SkillsSection />
-        <CodeGraphSection />
+        <CodeGraphSection
+          onDelete={onDeleteCodeGraph}
+          onIndex={onIndexCodeGraph}
+          onOpenExternal={onOpenExternal}
+          onReindex={onReindexCodeGraph}
+          onToggle={onSaveCodeGraphSettings}
+          settings={codeGraphSettings}
+        />
       </div>
     </section>
   );

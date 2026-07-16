@@ -28,6 +28,10 @@ interface WebResearchFixture {
   transcript: Array<{ role: string; tool?: string; answer?: string }>;
 }
 
+interface CodeGraphFixture {
+  transcript: Array<{ role: string; tool?: string; answer?: string }>;
+}
+
 const LIVE_TASKS: readonly LiveTask[] = [
   {
     name: 'read file',
@@ -125,6 +129,25 @@ async function runFixtures(modelId: string): Promise<void> {
     Boolean(assistantTurns[2]?.answer);
   process.stdout.write(`Web research flow: ${webFlowPasses ? 'pass' : 'fail'}\n`);
   if (!webFlowPasses) process.exitCode = 1;
+  const codeGraphFixture = JSON.parse(
+    await readFile(
+      path.join(
+        path.dirname(fileURLToPath(import.meta.url)),
+        'fixtures',
+        'codegraph-architecture.json',
+      ),
+      'utf8',
+    ),
+  ) as CodeGraphFixture;
+  const codeGraphTools = codeGraphFixture.transcript
+    .filter((turn) => turn.role === 'assistant' && turn.tool)
+    .map((turn) => turn.tool);
+  const codeGraphFlowPasses =
+    codeGraphTools.filter((tool) => tool === 'explore_code').length === 1 &&
+    codeGraphTools.filter((tool) => tool === 'read_file').length === 0 &&
+    Boolean(codeGraphFixture.transcript.at(-1)?.answer);
+  process.stdout.write(`Code graph flow: ${codeGraphFlowPasses ? 'pass' : 'fail'}\n`);
+  if (!codeGraphFlowPasses) process.exitCode = 1;
 }
 
 async function runLive(modelId: string): Promise<void> {

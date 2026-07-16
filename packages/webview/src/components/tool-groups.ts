@@ -3,7 +3,7 @@ import type { UiTool } from '@/state/store';
 export type ToolDisplayItem =
   { key: string; kind: 'single'; tool: UiTool } | { key: string; kind: 'group'; tools: UiTool[] };
 
-const readOnlyTools = new Set(['read_file', 'list_dir', 'glob', 'grep', 'explore_code']);
+const readOnlyTools = new Set(['read_file', 'list_dir', 'glob', 'grep']);
 
 export function groupConsecutiveTools(tools: UiTool[]): ToolDisplayItem[] {
   const result: ToolDisplayItem[] = [];

@@ -30,6 +30,7 @@ import {
 import * as vscode from 'vscode';
 
 import { createRestoreMessages } from './restore-messages.js';
+import { CodeGraphService } from './codegraph-service.js';
 import { ExtensionToolHost } from './tool-host.js';
 
 function promptSuggestions(labels: string[]): SuggestedAction[] {
@@ -52,6 +53,7 @@ interface StoredSession {
 const SESSION_KEY = 'helm.session.v1';
 const FULL_ACCESS_KEY = 'helm.fullAccessConfirmed';
 const TOOL_ALLOW_PATTERNS_KEY = 'helm.toolAllowPatterns.v1';
+const CODE_GRAPH_NOTICE_DISMISSED_KEY = 'helm.codeGraphNoticeDismissed.v1';
 const WEB_PROVIDERS: WebSearchProviderId[] = ['tavily', 'brave', 'exa', 'duckduckgo'];
 
 export class SessionManager implements vscode.Disposable {
@@ -59,6 +61,8 @@ export class SessionManager implements vscode.Disposable {
   private readonly registry = new ProviderRegistry();
   private readonly queue = new SteerQueue();
   private readonly skills = new SkillLoader();
+  private readonly codeGraph: CodeGraphService;
+  private readonly codeGraphWatcher: vscode.FileSystemWatcher;
   private readonly toolHost: ExtensionToolHost;
   private readonly statusBar: vscode.StatusBarItem;
   private session: StoredSession;
@@ -79,6 +83,17 @@ export class SessionManager implements vscode.Disposable {
       modelId: 'claude-sonnet-4-5',
       mode: 'agent',
     };
+    this.codeGraph = new CodeGraphService(workspaceRoot.fsPath, {
+      extensionRoot: context.extensionUri.fsPath,
+      onProgress: (progress) => {
+        this.post({ type: 'codeGraphProgress', progress });
+        this.updateStatus();
+      },
+      onStateChanged: () => {
+        void this.postSettings();
+        this.updateStatus();
+      },
+    });
     this.toolHost = new ExtensionToolHost(
       workspaceRoot,
       context.globalStorageUri,
@@ -91,8 +106,26 @@ export class SessionManager implements vscode.Disposable {
           void this.postSettings();
         },
         webConfig: () => this.webRuntimeConfig(),
+        exploreCode: (query, signal) => this.codeGraph.explore(query, signal),
       },
     );
+    this.codeGraphWatcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(workspaceRoot, '**/*'),
+    );
+    const scheduleCodeGraphSync = (uri: vscode.Uri) => {
+      const relative = path.relative(this.workspaceRoot.fsPath, uri.fsPath);
+      if (
+        relative.startsWith('.codegraph') ||
+        relative.startsWith('.git') ||
+        relative.includes(`${path.sep}node_modules${path.sep}`)
+      ) {
+        return;
+      }
+      this.codeGraph.scheduleSync();
+    };
+    this.codeGraphWatcher.onDidCreate(scheduleCodeGraphSync);
+    this.codeGraphWatcher.onDidChange(scheduleCodeGraphSync);
+    this.codeGraphWatcher.onDidDelete(scheduleCodeGraphSync);
     this.statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     this.statusBar.command = 'helm.openChat';
     this.statusBar.show();
@@ -103,6 +136,8 @@ export class SessionManager implements vscode.Disposable {
   dispose(): void {
     this.disposed = true;
     this.controller?.abort();
+    this.codeGraphWatcher.dispose();
+    this.codeGraph.dispose();
     this.toolHost.dispose();
     this.statusBar.dispose();
   }
@@ -398,6 +433,30 @@ export class SessionManager implements vscode.Disposable {
         this.toolHost.removeAllowedDomain(message.domain);
         await this.postSettings();
         break;
+      case 'saveCodeGraphSettings': {
+        await vscode.workspace
+          .getConfiguration('helm')
+          .update('codeGraph.enabled', message.enabled, vscode.ConfigurationTarget.Workspace);
+        await this.postSettings();
+        if (message.enabled) this.maybePostCodeGraphConsent();
+        break;
+      }
+      case 'initializeCodeGraph':
+        await this.context.workspaceState.update(CODE_GRAPH_NOTICE_DISMISSED_KEY, true);
+        await this.runCodeGraphOperation(() => this.codeGraph.initialize(message.addToGitignore));
+        break;
+      case 'dismissCodeGraphConsent':
+        await this.context.workspaceState.update(CODE_GRAPH_NOTICE_DISMISSED_KEY, true);
+        break;
+      case 'reindexCodeGraph':
+        await this.runCodeGraphOperation(() => this.codeGraph.reindex());
+        break;
+      case 'requestDeleteCodeGraphIndex':
+        this.post({ type: 'codeGraphDeleteConfirmationRequired' });
+        break;
+      case 'deleteCodeGraphIndex':
+        await this.runCodeGraphOperation(() => this.codeGraph.deleteIndex());
+        break;
       case 'openExternal': {
         const url = new URL(message.url);
         if (url.protocol === 'http:' || url.protocol === 'https:') {
@@ -473,7 +532,8 @@ export class SessionManager implements vscode.Disposable {
       this.post(message);
     }
     this.postQueue();
-    this.postSettings();
+    await this.postSettings();
+    this.maybePostCodeGraphConsent();
   }
 
   private async submit(item: QueuedInstruction): Promise<void> {
@@ -559,6 +619,7 @@ export class SessionManager implements vscode.Disposable {
         context: await this.workspaceContext(item.text),
         reasoningEffort: this.session.reasoningEffort ?? 'medium',
         webEnabled: this.webEnabled(),
+        codeGraphEnabled: this.codeGraphEnabled(),
         callbacks: {
           onText: (delta) => {
             text += delta;
@@ -825,7 +886,8 @@ export class SessionManager implements vscode.Disposable {
     }
     this.session.mode = mode;
     await this.persist();
-    this.postSettings();
+    await this.postSettings();
+    this.maybePostCodeGraphConsent();
   }
 
   private async testConnection(
@@ -1191,6 +1253,16 @@ export class SessionManager implements vscode.Disposable {
     return vscode.workspace.getConfiguration('helm').get<boolean>('web.enabled', true);
   }
 
+  private codeGraphFeatureEnabled(): boolean {
+    return vscode.workspace.getConfiguration('helm').get<boolean>('codeGraph.enabled', true);
+  }
+
+  private codeGraphEnabled(): boolean {
+    return (
+      this.session.mode !== 'chat' && this.codeGraphFeatureEnabled() && this.codeGraph.hasIndex()
+    );
+  }
+
   private webProvider(): WebSearchProviderId {
     const configured = vscode.workspace
       .getConfiguration('helm')
@@ -1256,6 +1328,32 @@ export class SessionManager implements vscode.Disposable {
     }
   }
 
+  private maybePostCodeGraphConsent(): void {
+    if (
+      this.session.mode !== 'agent' ||
+      !this.codeGraphFeatureEnabled() ||
+      this.codeGraph.hasIndex() ||
+      this.context.workspaceState.get<boolean>(CODE_GRAPH_NOTICE_DISMISSED_KEY, false)
+    ) {
+      return;
+    }
+    this.post({
+      type: 'codeGraphConsentRequired',
+      gitRepository: this.codeGraph.isGitRepository(),
+    });
+  }
+
+  private async runCodeGraphOperation(operation: () => Promise<void>): Promise<void> {
+    try {
+      await operation();
+    } catch (error) {
+      this.post({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+    } finally {
+      this.updateStatus();
+      await this.postSettings();
+    }
+  }
+
   private async postSettings(): Promise<void> {
     const providerKeys = Object.fromEntries(
       await Promise.all(
@@ -1279,6 +1377,7 @@ export class SessionManager implements vscode.Disposable {
       hasApiKey: providerKeys[this.session.provider]?.configured ?? false,
       providerKeys,
       web: await this.webSettingsState(),
+      codeGraph: await this.codeGraph.settingsState(this.codeGraphFeatureEnabled()),
     });
   }
 
@@ -1301,9 +1400,21 @@ export class SessionManager implements vscode.Disposable {
     tokens = this.session.usage?.tokens ?? 0,
     cost = this.session.usage?.cost ?? 0,
   ): void {
+    if (this.codeGraph.isIndexing()) {
+      const progress = this.codeGraphProgressLabel();
+      this.statusBar.text = `$(sync~spin) ${progress}`;
+      this.statusBar.tooltip = 'Helm is building the local workspace code graph.';
+      return;
+    }
     const state = this.running ? '$(sync~spin)' : '$(compass)';
     this.statusBar.text = `${state} ${this.session.modelId} · ${this.session.mode}`;
     this.statusBar.tooltip = `Helm · ${tokens.toLocaleString()} tokens · ≈$${cost.toFixed(4)}`;
+  }
+
+  private codeGraphProgressLabel(): string {
+    const progress = this.codeGraph.currentProgress();
+    if (!progress || progress.total <= 0) return 'Indexing workspace…';
+    return `Indexing workspace… ${progress.current.toLocaleString()}/${progress.total.toLocaleString()} files`;
   }
 }
 

@@ -4,7 +4,7 @@ import { cpSync, mkdirSync, rmSync } from 'node:fs';
 await esbuild.build({
   bundle: true,
   entryPoints: ['src/extension.ts'],
-  external: ['vscode'],
+  external: ['vscode', '@colbymchenry/codegraph'],
   format: 'cjs',
   minify: false,
   outfile: 'dist/extension.js',

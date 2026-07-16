@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { ApprovalCard } from './ApprovalCard';
 import { Card } from './Card';
+import { CodeGraphCard } from './CodeGraphCard';
 import { Icon, type IconName } from './Icon';
 import { WebCard } from './WebCard';
 
@@ -73,6 +74,7 @@ export function ToolCard({
   if (tool.name === 'web_search' || tool.name === 'web_fetch') {
     return <WebCard onOpenUrl={onOpenUrl} tool={tool} />;
   }
+  if (tool.name === 'explore_code') return <CodeGraphCard tool={tool} />;
 
   const failed = tool.ok === false;
   return (

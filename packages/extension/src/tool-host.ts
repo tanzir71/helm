@@ -34,6 +34,7 @@ export interface ExtensionToolHostOptions {
   allowPatterns?: string[];
   onAllowPatternsChanged?: (patterns: string[]) => void;
   webConfig: () => Promise<WebRuntimeConfig>;
+  exploreCode: (query: string, signal?: AbortSignal) => Promise<string>;
 }
 
 interface PendingApproval {
@@ -219,6 +220,8 @@ export class ExtensionToolHost implements ToolHost, vscode.Disposable {
         return this.webSearch(input, context.signal);
       case 'web_fetch':
         return this.webFetch(input, context);
+      case 'explore_code':
+        return this.options.exploreCode(String(input.query), context.signal);
     }
   }
 

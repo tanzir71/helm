@@ -74,6 +74,11 @@
           ],
           "default": "duckduckgo",
           "description": "Search provider used by Helm's built-in web search tool."
+        },
+        "helm.codeGraph.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Helm's local indexed code-graph tool when this workspace has an index."
         }
       }
     }
@@ -82,7 +87,7 @@
     "build": "pnpm --filter @helm/webview build && node esbuild.mjs",
     "build:test": "tsc -p tsconfig.test.json",
     "clean": "rm -rf dist .vscode-test",
-    "package": "pnpm build && mkdir -p ../../dist && vsce package --no-dependencies --out ../../dist/helm-0.1.0.vsix",
+    "package": "pnpm build && node scripts/prepare-codegraph.mjs && mkdir -p ../../dist && vsce package --no-dependencies --out ../../dist/helm-0.1.0.vsix",
     "test": "vitest run tests",
     "test:integration": "pnpm build && pnpm build:test && node ./dist-test/runTest.js",
     "typecheck": "tsc --noEmit"
@@ -95,5 +100,8 @@
     "@vscode/vsce": "^3.2.1",
     "esbuild": "^0.25.0",
     "mocha": "^11.0.0"
+  },
+  "dependencies": {
+    "@colbymchenry/codegraph": "^1.4.1"
   }
 }

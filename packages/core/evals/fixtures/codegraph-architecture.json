@@ -1,0 +1,22 @@
+{
+  "name": "answer an architecture question from the indexed graph",
+  "prompt": "How does SessionManager reach the workspace tools, and what depends on it?",
+  "transcript": [
+    {
+      "role": "assistant",
+      "tool": "explore_code",
+      "input": {
+        "query": "How does SessionManager reach ExtensionToolHost and what depends on it?"
+      }
+    },
+    {
+      "role": "tool",
+      "tool": "explore_code",
+      "output": "SessionManager constructs ExtensionToolHost and passes it to AgentRunner; ViewProvider constructs SessionManager. Relevant line-numbered source and call paths are included."
+    },
+    {
+      "role": "assistant",
+      "answer": "ViewProvider creates SessionManager, which gives ExtensionToolHost to AgentRunner for workspace tool execution."
+    }
+  ]
+}
