@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "default": "./dist/browser.js"
     }
   },
   "scripts": {
@@ -19,7 +23,15 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.0",
+    "@ai-sdk/google": "^2.0.0",
+    "@ai-sdk/openai": "^2.0.0",
+    "@ai-sdk/openai-compatible": "^1.0.0",
+    "@ai-sdk/provider": "^2.0.0",
+    "@openrouter/ai-sdk-provider": "^1.0.0",
     "ai": "^5.0.0",
+    "minimatch": "^10.0.0",
+    "yaml": "^2.7.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {

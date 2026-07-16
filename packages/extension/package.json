@@ -1,5 +1,5 @@
 {
-  "name": "@helm/extension",
+  "name": "helm",
   "displayName": "Helm",
   "description": "Beginner-friendly BYOK coding agent",
   "version": "0.1.0",
@@ -64,19 +64,20 @@
   },
   "scripts": {
     "build": "pnpm --filter @helm/webview build && node esbuild.mjs",
+    "build:test": "tsc -p tsconfig.test.json",
     "clean": "rm -rf dist .vscode-test",
-    "package": "pnpm build && mkdir -p ../../dist && vsce package --out ../../dist/helm-0.1.0.vsix",
-    "test": "vitest run",
-    "test:integration": "node ./dist-test/runTest.js",
+    "package": "pnpm build && mkdir -p ../../dist && vsce package --no-dependencies --out ../../dist/helm-0.1.0.vsix",
+    "test": "vitest run tests",
+    "test:integration": "pnpm build && pnpm build:test && node ./dist-test/runTest.js",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@helm/core": "workspace:*"
-  },
   "devDependencies": {
+    "@helm/core": "workspace:*",
+    "@types/mocha": "^10.0.0",
     "@types/vscode": "^1.96.0",
     "@vscode/test-electron": "^2.4.1",
     "@vscode/vsce": "^3.2.1",
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "mocha": "^11.0.0"
   }
 }

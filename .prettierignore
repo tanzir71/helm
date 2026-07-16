@@ -1,6 +1,8 @@
 node_modules
 dist
 coverage
+dist-test
+.vscode-test
 *.vsix
 pnpm-lock.yaml
 HANDOFF-agent-harness.md

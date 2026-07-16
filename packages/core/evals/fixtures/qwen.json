@@ -1,0 +1,12 @@
+[
+  { "name": "read file", "toolCall": "{tool:'read_file'}", "expectedTool": "read_file" },
+  { "name": "list", "toolCall": "{\"tool\":\"list_dir\"}", "expectedTool": "list_dir" },
+  { "name": "grep", "toolCall": "{tool:'grep'}", "expectedTool": "grep" },
+  { "name": "glob", "toolCall": "{\"tool\":\"glob\"}", "expectedTool": "glob" },
+  { "name": "edit", "toolCall": "{tool:'edit_file'}", "expectedTool": "edit_file" },
+  { "name": "write", "toolCall": "{\"tool\":\"write_file\"}", "expectedTool": "write_file" },
+  { "name": "command", "toolCall": "{tool:'run_command'}", "expectedTool": "run_command" },
+  { "name": "fetch", "toolCall": "{\"tool\":\"fetch_url\"}", "expectedTool": "fetch_url" },
+  { "name": "skill", "toolCall": "{tool:'use_skill'}", "expectedTool": "use_skill" },
+  { "name": "read range", "toolCall": "{\"tool\":\"read_file\"}", "expectedTool": "read_file" }
+]

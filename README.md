@@ -1,0 +1,79 @@
+# Helm
+
+Helm is a beginner-friendly, bring-your-own-key coding agent for Visual Studio Code. It keeps
+provider credentials in VS Code SecretStorage, streams model text and reasoning into a native
+sidebar, and puts file changes and shell commands behind explicit safety controls.
+
+## What it supports
+
+- Anthropic, OpenAI, Google, OpenRouter, and local Ollama models
+- Official Moonshot (Kimi), Z.ai (GLM), DeepSeek, and DashScope (Qwen) endpoints
+- Chat, Agent, and Full Access modes with a command denylist in every mode
+- Markdown responses, highlighted code, collapsible reasoning, live tool cards, diffs, and Undo
+- Queued prompts, mid-run steering, Stop/Resume, persistent goals, and slash commands
+- `@file`, `@folder`, `@problems`, and `@terminal` context plus optional active-file context
+- Root and nested `AGENTS.md`, progressively loaded `SKILL.md` files, and context compaction
+- Open-model profiles, tool-call repair, loop detection, and a fixture-backed reliability eval
+
+Helm has no account service, server, or telemetry. Model requests go from the extension host to
+the provider you configure.
+
+## Install and start
+
+1. Build a VSIX with `pnpm package`, or use a supplied `dist/helm-<version>.vsix`.
+2. In VS Code, run **Extensions: Install from VSIX…** and reload the window.
+3. Open a folder, select the Helm compass in the Activity Bar, then choose **Set up a provider**.
+4. Pick a provider and model, paste its API key, and use **Test connection**.
+5. Start in **Chat** for read-only exploration or **Agent** for approval-gated edits and commands.
+
+Ollama does not require an API key. Its default server URL is `http://localhost:11434`; Helm
+normalizes that to the server's OpenAI-compatible `/v1` endpoint for chat requests.
+
+## Using Helm
+
+While a run is active, Enter queues the next prompt by default and Tab steers the live run. Change
+that behavior with `helm.enterBehavior`. Stop preserves queued work and presents Resume/Clear.
+
+Context mentions are selected with a fuzzy popup:
+
+```text
+@file:src/index.ts explain this file
+@folder:src find the best place for this feature
+@problems fix the current diagnostics
+@terminal explain the last command failure
+```
+
+Available slash commands are `/plan`, `/goal`, `/review`, `/init`, `/model`, `/status`,
+`/compact`, `/clear`, and `/help`. A goal persists with the workspace session and is re-anchored
+during long tool loops.
+
+### Safety modes
+
+- **Chat** exposes only read/search/context tools.
+- **Agent** proposes edits in VS Code diffs and asks before commands.
+- **Full Access** skips routine approvals only after a per-workspace warning.
+
+Dangerous command patterns remain blocked in every mode. Helm snapshots affected files before a
+turn's first mutation and exposes Undo after accepted changes.
+
+## Configuration
+
+- `helm.enterBehavior`: `queue` (default) or `steer` while a run is active.
+- `helm.utilityModel`: optional `provider/model-id` used for compaction and suggestions. If unset,
+  Helm prefers DeepSeek V4 Flash when a DeepSeek key exists, then falls back to the session model.
+
+## Development
+
+Requirements: Node.js 20+ and pnpm 10.
+
+```bash
+pnpm install
+pnpm verify
+pnpm --filter ./packages/extension test:integration
+pnpm package
+node packages/core/examples/cli-run.ts "say hi"
+pnpm eval --model qwen3-coder
+```
+
+See [RELEASE.md](RELEASE.md) for installation and smoke-test steps and
+[ARCHITECTURE.md](ARCHITECTURE.md) for contributor details.

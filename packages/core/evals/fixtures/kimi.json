@@ -1,0 +1,16 @@
+[
+  {
+    "name": "read file",
+    "toolCall": "{\"tool\":\"read_file\",\"path\":\"src/a.ts\"}",
+    "expectedTool": "read_file"
+  },
+  { "name": "list", "toolCall": "{tool:'list_dir',path:'.',}", "expectedTool": "list_dir" },
+  { "name": "grep", "toolCall": "{\"tool\":\"grep\",\"query\":\"TODO\"}", "expectedTool": "grep" },
+  { "name": "glob", "toolCall": "{tool:'glob',pattern:'**/*.ts'}", "expectedTool": "glob" },
+  { "name": "edit", "toolCall": "{\"tool\":\"edit_file\"}", "expectedTool": "edit_file" },
+  { "name": "write", "toolCall": "{tool:'write_file'}", "expectedTool": "write_file" },
+  { "name": "command", "toolCall": "{\"tool\":\"run_command\"}", "expectedTool": "run_command" },
+  { "name": "fetch", "toolCall": "{tool:'fetch_url',}", "expectedTool": "fetch_url" },
+  { "name": "skill", "toolCall": "{\"tool\":\"use_skill\"}", "expectedTool": "use_skill" },
+  { "name": "read range", "toolCall": "{tool:'read_file',path:'a',}", "expectedTool": "read_file" }
+]

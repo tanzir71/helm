@@ -6,5 +6,5 @@ coverage/
 .DS_Store
 .vscode-test/
 packages/extension/.vscode-test/
+packages/extension/dist-test/
 packages/webview/dist/
-
