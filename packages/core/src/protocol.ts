@@ -89,6 +89,21 @@ export interface SkillSettingsState {
   errors: string[];
 }
 
+export type WebviewAuditMode = 'keyboard' | 'theme';
+
+export interface WebviewAuditResult {
+  mode: WebviewAuditMode;
+  errors: string[];
+  mainInteractiveCount: number;
+  settingsInteractiveCount: number;
+  samples: Array<{
+    id: string;
+    color: string;
+    backgroundColor: string;
+    borderColor: string;
+  }>;
+}
+
 export type WebviewToHostMessage =
   | { type: 'webviewReady' }
   | { type: 'userMessage'; id: string; text: string }
@@ -125,6 +140,7 @@ export type WebviewToHostMessage =
   | { type: 'addSkillsFolder' }
   | { type: 'requestAddSkillsGit'; url: string }
   | { type: 'confirmAddSkillsGit'; url: string; confirmed: boolean }
+  | { type: 'webviewAuditResult'; requestId: string; result: WebviewAuditResult }
   | { type: 'openExternal'; url: string }
   | {
       type: 'testConnection';
@@ -207,6 +223,7 @@ export type HostToWebviewMessage =
   | { type: 'codeGraphDeleteConfirmationRequired' }
   | { type: 'skillsGitConfirmationRequired'; url: string }
   | { type: 'openSkillsSettings' }
+  | { type: 'runWebviewAudit'; requestId: string; mode: WebviewAuditMode }
   | { type: 'codeGraphProgress'; progress: CodeGraphProgress }
   | { type: 'error'; message: string; action?: string };
 

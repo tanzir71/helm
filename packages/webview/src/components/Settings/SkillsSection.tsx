@@ -32,7 +32,11 @@ export function SkillsSection({
   }, [focused]);
 
   return (
-    <section className="grid gap-3 border-b border-[var(--helm-border)] py-4" ref={sectionRef}>
+    <section
+      className="grid gap-3 border-b border-[var(--helm-border)] py-4"
+      data-helm-theme-audit="skills"
+      ref={sectionRef}
+    >
       <div>
         <h2 className="m-0 flex items-center gap-2 font-semibold">
           <Icon name="tools" /> Skills
@@ -99,7 +103,7 @@ export function SkillsSection({
         <label htmlFor="skills-git-url">Add from Git URL…</label>
         <div className="flex min-w-0 gap-2">
           <input
-            className="min-w-0 flex-1 rounded-[var(--helm-radius-control)] border border-[var(--helm-border)] bg-[var(--helm-input-background)] px-2 py-1 text-[var(--helm-input-foreground)] outline-none focus:border-[var(--helm-focus-border)]"
+            className="min-w-0 flex-1 rounded-[var(--helm-radius-control)] border border-[var(--helm-border)] bg-[var(--helm-input-background)] px-2 py-1 text-[var(--helm-input-foreground)] focus:border-[var(--helm-focus-border)]"
             id="skills-git-url"
             onChange={(event) => setGitUrl(event.target.value)}
             placeholder="https://github.com/owner/skills.git"

@@ -364,6 +364,8 @@ function reduceHostMessage(state: UiState, message: HostToWebviewMessage): UiSta
     }
     case 'openSkillsSettings':
       return { ...state, settingsOpen: true, settingsFocus: 'skills' };
+    case 'runWebviewAudit':
+      return state;
     case 'modelsUpdated':
       return {
         ...state,

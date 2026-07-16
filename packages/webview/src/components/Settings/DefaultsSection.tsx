@@ -15,7 +15,7 @@ export interface DefaultsSectionProps {
 }
 
 const fieldClass =
-  'mt-1 w-full rounded-[var(--helm-radius-control)] border border-[var(--helm-border)] bg-[var(--helm-input-background)] px-2 py-1.5 text-[var(--helm-input-foreground)] outline-none focus:border-[var(--helm-focus-border)]';
+  'mt-1 w-full rounded-[var(--helm-radius-control)] border border-[var(--helm-border)] bg-[var(--helm-input-background)] px-2 py-1.5 text-[var(--helm-input-foreground)] focus:border-[var(--helm-focus-border)]';
 
 export function DefaultsSection({ onSave, settings }: DefaultsSectionProps): React.JSX.Element {
   const [mode, setMode] = useState(settings.mode);

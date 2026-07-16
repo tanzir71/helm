@@ -31,6 +31,7 @@ import {
 } from './state/selectors';
 import { resolveClientCommand } from './state/client-command';
 import { initialUiState, uiReducer } from './state/store';
+import { runWebviewAudit } from './state/webview-audit';
 import { vscode } from './vscode';
 
 function statusForTool(name: string): string {
@@ -75,6 +76,17 @@ export function App(): React.JSX.Element {
 
   useEffect(() => {
     const receive = (event: MessageEvent<HostToWebviewMessage>) => {
+      if (event.data.type === 'runWebviewAudit') {
+        const { mode, requestId } = event.data;
+        void runWebviewAudit(mode).then((result) =>
+          vscode.postMessage({
+            type: 'webviewAuditResult',
+            requestId,
+            result,
+          }),
+        );
+        return;
+      }
       dispatch({ type: 'hostMessage', message: event.data });
     };
     window.addEventListener('message', receive);

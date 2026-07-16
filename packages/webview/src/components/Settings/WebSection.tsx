@@ -13,7 +13,7 @@ export interface WebSectionProps {
 }
 
 const fieldClass =
-  'mt-1 w-full rounded-[var(--helm-radius-control)] border border-[var(--helm-border)] bg-[var(--helm-input-background)] px-2 py-1.5 text-[var(--helm-input-foreground)] outline-none focus:border-[var(--helm-focus-border)]';
+  'mt-1 w-full rounded-[var(--helm-radius-control)] border border-[var(--helm-border)] bg-[var(--helm-input-background)] px-2 py-1.5 text-[var(--helm-input-foreground)] focus:border-[var(--helm-focus-border)]';
 
 const providerNames: Record<WebSearchProviderId, string> = {
   tavily: 'Tavily',
@@ -47,7 +47,10 @@ export function WebSection({
   }, [result, testing]);
 
   return (
-    <section className="grid gap-3 border-b border-[var(--helm-border)] py-4">
+    <section
+      className="grid gap-3 border-b border-[var(--helm-border)] py-4"
+      data-helm-theme-audit="web"
+    >
       <div>
         <h2 className="m-0 flex items-center gap-2 font-semibold">
           <Icon name="globe" /> Web

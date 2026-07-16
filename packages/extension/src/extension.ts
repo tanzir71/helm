@@ -28,6 +28,9 @@ export function activate(context: vscode.ExtensionContext): void {
       ),
       vscode.commands.registerCommand('helm.testPlanExecution', () => provider.testPlanExecution()),
       vscode.commands.registerCommand('helm.testTwoFileEdit', () => provider.testTwoFileEdit()),
+      vscode.commands.registerCommand('helm.testWebviewAudit', (mode: 'keyboard' | 'theme') =>
+        provider.testWebviewAudit(mode),
+      ),
     );
   }
 }

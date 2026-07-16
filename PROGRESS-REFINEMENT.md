@@ -2,14 +2,13 @@
 
 ## Current
 
-R7 quality gate — add keyboard traversal coverage, extend theme checks to the new components,
-run every release gate, and prepare the required human screenshot/live-smoke checklist.
+Automated refinement is complete. The remaining work is the required human screenshot and live
+in-extension capability review below.
 
-1. Add an Electron keyboard traversal test covering the complete panel interaction path.
-2. Extend light, dark, and high-contrast token checks to Skills, Web, and Code Graph UI.
-3. Run `pnpm verify`, the recorded eval, and the full Electron suite.
-4. Record the §4 screenshot matrix and live web/code-graph smoke repro steps for human review.
-5. Commit R7 and leave the human gate explicit until the visual/live review is confirmed.
+1. Reload the open Extension Development Host so it uses the latest build.
+2. Complete the screenshot-parity checklist at normal and narrow sidebar widths.
+3. Complete the three live capability checks and record any failure with a screenshot/repro.
+4. Confirm the human gate; then the refinement goal can be closed.
 
 ## Milestones
 
@@ -72,15 +71,51 @@ run every release gate, and prepare the required human screenshot/live-smoke che
 
 ### R7 — Quality gate
 
-- [ ] Accessibility pass per §3.11 (keyboard traversal test in Electron suite)
-- [ ] Light/dark/high-contrast verified via the existing theming test extended to new components
-- [ ] `pnpm verify` green; core coverage still ≥ 70%; zero `any` introduced
-- [ ] §4 screenshot checklist + a live smoke check of web_search/web_fetch/explore_code listed
+- [x] Accessibility pass per §3.11 (keyboard traversal test in Electron suite)
+- [x] Light/dark/high-contrast verified via the existing theming test extended to new components
+- [x] `pnpm verify` green; core coverage still ≥ 70%; zero `any` introduced
+- [x] §4 screenshot checklist + a live smoke check of web_search/web_fetch/explore_code listed
       under `## Awaiting human review` with repro steps **[HUMAN-GATE]**
 
 ## Awaiting human review
 
-None yet.
+### Screenshot parity **[HUMAN-GATE]**
+
+Repro:
+
+1. In the open Extension Development Host, run **Developer: Reload Window**, then open the Helm
+   activity-bar view.
+2. Put Helm beside Codex at a normal sidebar width (~320 px), then repeat at ~240 px.
+3. Run **Preferences: Color Theme** with Default Light Modern, Default Dark Modern, and Default High
+   Contrast. Capture the idle view, a running turn, an expanded tool card, and Settings → Skills in
+   each theme.
+4. Seed or restore a 30-turn session, scroll upward while a mock/live answer streams, and confirm
+   the transcript neither yanks the scroll position nor gains panel-level horizontal scrolling.
+
+- [ ] At rest, only the header, transcript, and composer are visible—no decorative chrome.
+- [ ] All icons are Codicons, no emoji or off-theme color appears, and focus rings remain visible.
+- [ ] Composer container, pills, auto-grow, and send/stop transition look native to VS Code/Codex.
+- [ ] A 30-turn session reads as a calm grouped activity log and scrolls without visible jank.
+- [ ] Light, dark, and high-contrast themes all look intentional.
+- [ ] Long prose, skill descriptions, paths, errors, and code stay contained; prose wraps and code
+      scrolls locally without cropping the extension.
+
+### Live capability smoke **[HUMAN-GATE]**
+
+1. **`web_search`:** Settings → Web → choose DuckDuckGo (free) → Save. Ask “Search the official VS
+   Code docs for the webview guide.” Confirm a globe card shows titled results and opens a result in
+   the external browser.
+2. **`web_fetch`:** ask “Fetch and summarize
+   `https://code.visualstudio.com/api/extension-guides/webview`.” Approve the domain. Confirm the
+   fetch card names the page, output is readable markdown, and the raw result begins with the
+   untrusted-content warning.
+3. **`explore_code`:** Settings → Code graph → Index workspace (leave “Add `.codegraph/` to
+   `.gitignore`” checked), then ask “What calls `resolveEnterAction`, and what is its blast radius?”
+   Confirm exactly one code-graph card returns source/callers without a series of file-read cards.
+
+- [ ] `web_search` passes in the live extension.
+- [ ] `web_fetch` approval, extraction, and external-link behavior pass in the live extension.
+- [ ] `explore_code` indexing and one-call architecture answer pass in the live extension.
 
 ## Decisions
 
@@ -133,3 +168,10 @@ None yet.
   and a compact source-grouped manager. Builtin validity/import/card regressions pass, the recorded
   eval remains at 100% tool-call success, `pnpm verify` is green at 82.9% core coverage, and
   Electron remains 5/5.
+- [2026-07-16] R7 automated gate complete: the Electron webview audit traverses every visible main
+  and Settings control, found and fixed suppressed focus outlines, and resolves distinct Skills/Web/
+  Code Graph palettes in light, dark, and high-contrast themes. Electron is 7/7, the recorded eval
+  remains at 100% tool-call success, `pnpm verify` is green at 82.94% core coverage, and no `any` was
+  introduced. A live DuckDuckGo query returned three official-doc results and guarded fetch returned
+  20,236 characters with the untrusted-content wrapper; final visual and in-extension smoke checks
+  remain under the human gate above.

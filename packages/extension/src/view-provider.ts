@@ -1,4 +1,4 @@
-import { isWebviewToHostMessage } from '@helm/core';
+import { isWebviewToHostMessage, type WebviewAuditMode, type WebviewAuditResult } from '@helm/core';
 import * as vscode from 'vscode';
 
 import { SessionManager } from './session-manager.js';
@@ -44,6 +44,11 @@ export class HelmViewProvider implements vscode.WebviewViewProvider, vscode.Disp
   }> {
     if (!this.session) throw new Error('Helm chat view is not ready.');
     return this.session.testPlanExecution();
+  }
+
+  async testWebviewAudit(mode: WebviewAuditMode): Promise<WebviewAuditResult> {
+    if (!this.session) throw new Error('Helm chat view is not ready.');
+    return await this.session.testWebviewAudit(mode);
   }
 
   resolveWebviewView(view: vscode.WebviewView): void {

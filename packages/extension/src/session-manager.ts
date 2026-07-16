@@ -26,6 +26,8 @@ import {
   type SuggestedAction,
   type WebSearchProviderId,
   type WebSettingsState,
+  type WebviewAuditMode,
+  type WebviewAuditResult,
   type WebviewToHostMessage,
 } from '@helm/core';
 import * as vscode from 'vscode';
@@ -81,6 +83,14 @@ export class SessionManager implements vscode.Disposable {
   private readonly connectedProviders = new Set<string>();
   private readonly skillsReady: Promise<void>;
   private skillImportErrors: string[] = [];
+  private readonly webviewAuditRequests = new Map<
+    string,
+    {
+      resolve: (result: WebviewAuditResult) => void;
+      reject: (error: Error) => void;
+      timeout: ReturnType<typeof setTimeout>;
+    }
+  >();
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -150,6 +160,11 @@ export class SessionManager implements vscode.Disposable {
     this.codeGraph.dispose();
     this.toolHost.dispose();
     this.statusBar.dispose();
+    for (const request of this.webviewAuditRequests.values()) {
+      clearTimeout(request.timeout);
+      request.reject(new Error('Helm webview was disposed before the audit completed.'));
+    }
+    this.webviewAuditRequests.clear();
   }
 
   lastAssistantText(): string | undefined {
@@ -181,6 +196,19 @@ export class SessionManager implements vscode.Disposable {
     } finally {
       this.testResolvedModel = undefined;
     }
+  }
+
+  async testWebviewAudit(mode: WebviewAuditMode): Promise<WebviewAuditResult> {
+    this.assertTestMode();
+    const requestId = crypto.randomUUID();
+    return await new Promise<WebviewAuditResult>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.webviewAuditRequests.delete(requestId);
+        reject(new Error(`Timed out waiting for the ${mode} webview audit.`));
+      }, 10_000);
+      this.webviewAuditRequests.set(requestId, { resolve, reject, timeout });
+      this.post({ type: 'runWebviewAudit', requestId, mode });
+    });
   }
 
   async testQueueSteerStop(): Promise<{
@@ -515,6 +543,15 @@ export class SessionManager implements vscode.Disposable {
           );
         }
         break;
+      case 'webviewAuditResult': {
+        const request = this.webviewAuditRequests.get(message.requestId);
+        if (request) {
+          clearTimeout(request.timeout);
+          this.webviewAuditRequests.delete(message.requestId);
+          request.resolve(message.result);
+        }
+        break;
+      }
       case 'openExternal': {
         const url = new URL(message.url);
         if (url.protocol === 'http:' || url.protocol === 'https:') {

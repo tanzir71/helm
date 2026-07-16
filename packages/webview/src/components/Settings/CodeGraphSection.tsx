@@ -28,7 +28,7 @@ export function CodeGraphSection({
   useEffect(() => setEnabled(settings.enabled), [settings.enabled]);
 
   return (
-    <section className="grid gap-3 py-4">
+    <section className="grid gap-3 py-4" data-helm-theme-audit="code-graph">
       <div>
         <h2 className="m-0 flex items-center gap-2 font-semibold">
           <Icon name="type-hierarchy" /> Code graph

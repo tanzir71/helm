@@ -3,6 +3,18 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'mocha';
 import * as vscode from 'vscode';
 
+interface WebviewAuditResult {
+  errors: string[];
+  mainInteractiveCount: number;
+  settingsInteractiveCount: number;
+  samples: Array<{
+    id: string;
+    color: string;
+    backgroundColor: string;
+    borderColor: string;
+  }>;
+}
+
 describe('Helm extension', () => {
   it('activates and streams a mock chat turn', async () => {
     const extension = vscode.extensions.getExtension('helm-local.helm');
@@ -53,5 +65,57 @@ describe('Helm extension', () => {
     assert.equal(result.changed, true);
     assert.match(result.output, /hello/u);
     assert.equal(result.restored, true);
+  });
+
+  it('traverses every main and settings control with visible keyboard focus', async () => {
+    const result = await vscode.commands.executeCommand<WebviewAuditResult>(
+      'helm.testWebviewAudit',
+      'keyboard',
+    );
+    assert.ok(result, 'Webview keyboard audit returned no result');
+    assert.deepEqual(result.errors, []);
+    assert.ok(result.mainInteractiveCount >= 5, 'Expected at least five main-panel controls');
+    assert.ok(result.settingsInteractiveCount >= 30, 'Expected the full settings control set');
+  });
+
+  it('resolves intentional colors for new sections in light, dark, and high-contrast themes', async () => {
+    const configuration = vscode.workspace.getConfiguration('workbench');
+    const previousTheme = configuration.get<string>('colorTheme');
+    const palettes = new Set<string>();
+    try {
+      for (const theme of [
+        'Default Light Modern',
+        'Default Dark Modern',
+        'Default High Contrast',
+      ]) {
+        await configuration.update('colorTheme', theme, vscode.ConfigurationTarget.Global);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        const result = await vscode.commands.executeCommand<WebviewAuditResult>(
+          'helm.testWebviewAudit',
+          'theme',
+        );
+        assert.ok(result, `${theme} audit returned no result`);
+        assert.deepEqual(result.errors, [], `${theme} theme audit failed`);
+        assert.deepEqual(result.samples.map((sample) => sample.id).sort(), [
+          'code-graph',
+          'skills',
+          'web',
+        ]);
+        palettes.add(
+          JSON.stringify(
+            result.samples.map(({ color, backgroundColor, borderColor }) => ({
+              color,
+              backgroundColor,
+              borderColor,
+            })),
+          ),
+        );
+      }
+      assert.equal(palettes.size, 3, 'Each VS Code theme should resolve a distinct palette');
+    } finally {
+      if (previousTheme) {
+        await configuration.update('colorTheme', previousTheme, vscode.ConfigurationTarget.Global);
+      }
+    }
   });
 });

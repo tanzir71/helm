@@ -83,7 +83,7 @@ export function Composer({
         }
         aria-controls={visibleCommandOptions.length > 0 ? 'helm-command-popover' : undefined}
         aria-label="Message Helm"
-        className="block max-h-[180px] min-h-8 w-full resize-none overflow-y-auto border-0 bg-transparent px-2 py-2 outline-none placeholder:text-[var(--helm-input-placeholder)]"
+        className="block max-h-[180px] min-h-8 w-full resize-none overflow-y-auto border-0 bg-transparent px-2 py-2 placeholder:text-[var(--helm-input-placeholder)]"
         onChange={(event) => {
           setDismissedCommandInput(undefined);
           onInputChange(event.target.value);
