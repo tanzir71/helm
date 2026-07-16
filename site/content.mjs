@@ -51,6 +51,57 @@ export const features = [
 
 export const comparisons = [
   {
+    slug: 'command-code',
+    competitor: 'Command Code',
+    eyebrow: 'Helm vs Command Code',
+    title: 'A VS Code-native harness or a taste-learning CLI?',
+    description:
+      'Both products aim to make open and frontier models productive. Helm is a local BYOK extension centered on explicit context and review; Command Code is a terminal-first agent with managed model access, skills, MCP, memory, and Taste learning.',
+    meta: 'Compare Helm and Command Code for open models, VS Code and CLI workflows, skills, memory, provider access, permissions, and codebase context.',
+    summary:
+      'Choose Helm when you want a compact VS Code-native agent, direct provider credentials, local Ollama, and an explicit CodeGraph. Choose Command Code when you want a polished CLI, a broad managed model catalog, MCP, memory, and an agent that learns your coding taste.',
+    helmBest:
+      'VS Code users who want provider traffic to stay direct, local-model support, visible approval boundaries, progressive skills, and an inspectable local code graph.',
+    competitorBest:
+      'Terminal-first developers who want one installed command, many hosted models, headless automation, MCP, memory, custom agents, and Taste-based personalization.',
+    sourceUrl: 'https://commandcode.ai/docs',
+    sourceLabel: 'Command Code documentation',
+    secondarySourceUrl: 'https://commandcode.ai/docs/reference/cli',
+    secondarySourceLabel: 'Command Code CLI reference',
+    rows: [
+      [
+        'Primary surface',
+        'VS Code extension; source CLI runner',
+        'Interactive and headless CLI with optional IDE context',
+      ],
+      [
+        'Model access',
+        'Nine direct provider routes plus local Ollama',
+        'Curated frontier and open-model catalog plus Anthropic provider selection',
+      ],
+      [
+        'Account layer',
+        'No Helm account, backend, or telemetry',
+        'Command Code login and plans for managed models',
+      ],
+      [
+        'Codebase context',
+        'Explicit mentions plus optional local CodeGraph',
+        'Workspace tools, added directories, sessions, memory, and checkpoints',
+      ],
+      [
+        'Reusable guidance',
+        'Eleven built-ins plus workspace/global SKILL.md files',
+        'Skills, custom agents, AGENTS.md, MCP, and Taste learning',
+      ],
+      [
+        'Review boundary',
+        'Chat, Agent, Full Access; native diffs and Undo',
+        'Plan, standard, auto-accept, and yolo permission modes with rewind',
+      ],
+    ],
+  },
+  {
     slug: 'cursor',
     competitor: 'Cursor',
     eyebrow: 'Helm vs Cursor',
@@ -174,32 +225,185 @@ export const comparisons = [
       [
         'Primary surface',
         'VS Code extension; source CLI runner',
-        'VS Code, JetBrains, CLI, cloud, and more',
+        'VS Code, JetBrains, CLI, cloud agents, browser, mobile, and Slack',
       ],
       [
         'Model access',
         'Nine direct provider routes plus local Ollama',
-        'Large model catalog, gateway, BYOK, and local options',
+        '500+ gateway models plus BYOK, custom, and local providers',
       ],
       [
         'Account layer',
         'No Helm account, server, or telemetry',
-        'Local and managed Kilo product surfaces',
+        'Local configuration or a Kilo account for its managed provider and cloud surfaces',
       ],
       [
         'Codebase context',
         'Explicit mentions plus optional local CodeGraph',
-        'Agent modes across IDE and cloud workflows',
+        'Shared agent runtime across editor, terminal, and cloud workflows',
       ],
       [
         'Reusable guidance',
         'Eleven built-ins plus workspace/global skills',
-        'Custom modes and broader agent ecosystem',
+        'Agents, skills, custom modes, MCP, and shared JSONC configuration',
       ],
       [
         'Review boundary',
         'Three permission modes, native diffs, checkpoints, Undo',
-        'Specialized modes and local/cloud agent controls',
+        'Specialized agents, permission controls, reviews, and cloud execution boundaries',
+      ],
+    ],
+  },
+  {
+    slug: 'cline',
+    competitor: 'Cline',
+    eyebrow: 'Helm vs Cline',
+    title: 'A lean open-model harness or a mature agent across editor and terminal?',
+    description:
+      'Helm and Cline both emphasize user control and model choice. Helm narrows the experience around VS Code, explicit context, open-model reliability, skills, and CodeGraph; Cline offers a broader established agent in both the editor and terminal.',
+    meta: 'Compare Helm and Cline for VS Code, terminal workflows, BYOK and local models, approvals, browser tools, skills, and codebase context.',
+    summary:
+      'Choose Helm for a smaller VS Code-native surface, direct provider routes, open-model profiles, progressive skills, and a local CodeGraph. Choose Cline for a mature editor-and-terminal agent, browser use, extensive provider choices, and its managed or BYOK access paths.',
+    helmBest:
+      'Developers who want a focused VS Code agent with no Helm account, direct provider credentials, a deliberate three-mode permission model, and explicit graph-backed code context.',
+    competitorBest:
+      'Developers who want an established agent in both editor and terminal, browser automation, broad provider configuration, and an approval-first workflow.',
+    sourceUrl: 'https://docs.cline.bot/cline-overview',
+    sourceLabel: 'Cline overview',
+    secondarySourceUrl: 'https://docs.cline.bot/getting-started/authorizing-with-cline',
+    secondarySourceLabel: 'Cline model-access options',
+    rows: [
+      [
+        'Primary surface',
+        'VS Code extension; source CLI runner',
+        'Editor extension and terminal agent',
+      ],
+      [
+        'Model access',
+        'Nine direct provider routes plus local Ollama',
+        'Cline billing, ClinePass, or BYOK across cloud and local runtimes',
+      ],
+      [
+        'Account layer',
+        'No Helm account, backend, or telemetry',
+        'Optional Cline account paths or direct provider credentials',
+      ],
+      [
+        'Codebase context',
+        'Mentions plus optional local CodeGraph',
+        'Editor context with filesystem, terminal, and browser tools',
+      ],
+      [
+        'Reusable guidance',
+        'Built-in, workspace, and global SKILL.md playbooks',
+        'Rules, workflows, hooks, and MCP integrations',
+      ],
+      [
+        'Review boundary',
+        'Chat, Agent, Full Access; native diffs and Undo',
+        'Explicit approval for agent actions with configurable auto-approval',
+      ],
+    ],
+  },
+  {
+    slug: 'opencode',
+    competitor: 'OpenCode',
+    eyebrow: 'Helm vs OpenCode',
+    title: 'A focused VS Code sidebar or an open agent across terminal, desktop, and IDE?',
+    description:
+      'Both products are open and model-agnostic. Helm is designed around a compact VS Code workflow with direct providers, skills, and CodeGraph; OpenCode starts from a terminal agent and extends into desktop, web, and IDE surfaces.',
+    meta: 'Compare Helm and OpenCode for open source, model providers, VS Code and terminal workflows, agents, plugins, permissions, and codebase context.',
+    summary:
+      'Choose Helm when you want a beginner-oriented VS Code experience and an open-model harness with explicit local context. Choose OpenCode when you want an open terminal-first platform with desktop, web, IDE integration, custom agents, plugins, and a very broad provider layer.',
+    helmBest:
+      'VS Code users who prefer a smaller opinionated agent, native review affordances, progressive skills, direct provider keys, and an optional local symbol graph.',
+    competitorBest:
+      'Developers who want a terminal-first open-source agent, many providers, configurable agents and plugins, or the same system across TUI, desktop, web, and IDE workflows.',
+    sourceUrl: 'https://opencode.ai/docs/',
+    sourceLabel: 'OpenCode introduction',
+    secondarySourceUrl: 'https://opencode.ai/docs/providers/',
+    secondarySourceLabel: 'OpenCode provider guide',
+    rows: [
+      [
+        'Primary surface',
+        'VS Code extension; source CLI runner',
+        'Terminal UI, desktop app, web app, and IDE extension',
+      ],
+      [
+        'Model access',
+        'Nine direct provider routes plus local Ollama',
+        'Broad built-in provider catalog plus custom OpenAI-compatible providers',
+      ],
+      [
+        'Account layer',
+        'No Helm account, backend, or telemetry',
+        'Direct provider credentials or optional managed OpenCode services',
+      ],
+      [
+        'Codebase context',
+        'Explicit mentions plus optional local CodeGraph',
+        'Project-aware terminal sessions, references, agents, and configurable tools',
+      ],
+      [
+        'Reusable guidance',
+        'Eleven built-ins plus workspace/global SKILL.md files',
+        'Custom agents, commands, configuration, plugins, and MCP',
+      ],
+      [
+        'Review boundary',
+        'Three permission modes, native diffs, checkpoints, Undo',
+        'Per-agent tool permissions with plan and build workflows',
+      ],
+    ],
+  },
+  {
+    slug: 'aider',
+    competitor: 'Aider',
+    eyebrow: 'Helm vs Aider',
+    title: 'A visual VS Code agent or a proven terminal pair programmer?',
+    description:
+      'Helm brings a reviewable agent workflow into VS Code and tunes its harness for open models. Aider is a mature terminal pair programmer with broad model support, automatic git commits, and a compact repository map.',
+    meta: 'Compare Helm and Aider for VS Code and terminal workflows, open and local models, codebase maps, git integration, skills, approvals, and beginner setup.',
+    summary:
+      'Choose Helm for a visual VS Code experience, explicit approval modes, progressive skills, web tools, and a local CodeGraph. Choose Aider for a mature terminal workflow, broad model compatibility, automatic git commits, and its token-efficient repository map.',
+    helmBest:
+      'Developers who want visible reasoning, native diffs, queued steering, safety modes, skills, and code-relationship context without leaving VS Code.',
+    competitorBest:
+      'Terminal-comfortable developers who value a proven pair-programming loop, automatic git commits, broad model compatibility, and a concise whole-repository map.',
+    sourceUrl: 'https://aider.chat/docs/',
+    sourceLabel: 'Aider documentation',
+    secondarySourceUrl: 'https://aider.chat/docs/repomap.html',
+    secondarySourceLabel: 'Aider repository map',
+    rows: [
+      [
+        'Primary surface',
+        'VS Code extension; source CLI runner',
+        'Terminal pair programmer with IDE and browser workflows',
+      ],
+      [
+        'Model access',
+        'Nine direct provider routes plus local Ollama',
+        'Broad cloud, local, and OpenAI-compatible model support',
+      ],
+      [
+        'Account layer',
+        'No Helm account, backend, or telemetry',
+        'No Aider account required; uses configured provider credentials',
+      ],
+      [
+        'Codebase context',
+        'Mentions plus optional symbol-and-relationship CodeGraph',
+        'Token-budgeted repository map ranked from code dependencies',
+      ],
+      [
+        'Reusable guidance',
+        'Built-in, workspace, and global SKILL.md playbooks',
+        'Convention files, configuration, in-chat commands, and model settings',
+      ],
+      [
+        'Review boundary',
+        'Chat, Agent, Full Access; native diffs and Undo',
+        'Git-native edits with automatic commits, diffs, and familiar undo tools',
       ],
     ],
   },

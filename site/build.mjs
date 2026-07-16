@@ -152,7 +152,13 @@ function featureCards() {
 }
 
 function comparisonCards(prefix = './') {
-  return comparisons
+  const priority = ['command-code', 'kilo-code', 'cline', 'opencode', 'aider'];
+  return [...comparisons]
+    .sort((a, b) => {
+      const aRank = priority.indexOf(a.slug);
+      const bRank = priority.indexOf(b.slug);
+      return (aRank === -1 ? priority.length : aRank) - (bRank === -1 ? priority.length : bRank);
+    })
     .map(
       (item) => `
         <a class="comparison-card" href="${prefix}compare/${item.slug}/" data-reveal>
@@ -366,7 +372,7 @@ function compareIndexPage() {
   return page({
     title: 'Compare Helm with AI coding agents',
     description:
-      'Compare Helm with Cursor, GitHub Copilot, Kilo Code, and Claude Code across models, IDE workflows, context, skills, and privacy.',
+      'Compare Helm with Command Code, Kilo Code, Cline, OpenCode, Aider, Cursor, GitHub Copilot, and Claude Code across models, workflows, context, skills, and privacy.',
     route,
     current: 'compare',
     content,

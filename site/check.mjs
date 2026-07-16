@@ -3,6 +3,8 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+import { comparisons } from './content.mjs';
+
 const siteRoot = path.dirname(fileURLToPath(import.meta.url));
 const outputRoot = path.join(siteRoot, 'dist');
 const failures = [];
@@ -70,12 +72,15 @@ const home = await readFile(path.join(outputRoot, 'index.html'), 'utf8');
 if ((home.match(/class="feature-card /gu) ?? []).length !== 6) {
   failures.push('index.html: expected six value-proposition cards');
 }
-if ((home.match(/class="comparison-card"/gu) ?? []).length !== 4) {
-  failures.push('index.html: expected four comparison links');
+if ((home.match(/class="comparison-card"/gu) ?? []).length !== comparisons.length) {
+  failures.push(`index.html: expected ${comparisons.length} comparison links`);
 }
 
 const sitemap = await readFile(path.join(outputRoot, 'sitemap.xml'), 'utf8');
-if ((sitemap.match(/<url>/gu) ?? []).length !== 6) failures.push('sitemap.xml: expected six URLs');
+const expectedSitemapUrls = comparisons.length + 2;
+if ((sitemap.match(/<url>/gu) ?? []).length !== expectedSitemapUrls) {
+  failures.push(`sitemap.xml: expected ${expectedSitemapUrls} URLs`);
+}
 
 if (failures.length > 0) {
   process.stderr.write(`${failures.join('\n')}\n`);
