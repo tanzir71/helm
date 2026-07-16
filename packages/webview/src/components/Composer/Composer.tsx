@@ -8,17 +8,21 @@ import {
   type CommandOption,
 } from './CommandPopover';
 import { ComposerToolbar } from './ComposerToolbar';
+import { FileAttachments } from './FileAttachments';
 import { resizeComposerTextarea } from './textarea-layout';
 
 export type SubmitKind = 'userMessage' | 'queueMessage' | 'steerMessage';
 
 export interface ComposerProps {
+  fileAttachments: string[];
   contextItems: string[];
   input: string;
   models: ReadonlyArray<{ id: string; label: string }>;
   onInputChange: (value: string) => void;
+  onAttachFiles: () => void;
   onModelChange: (modelId: string, effort: SessionSettings['reasoningEffort']) => void;
   onModeChange: (mode: ApprovalMode) => void;
+  onRemoveFileAttachment: (reference: string) => void;
   onStop: () => void;
   onSubmit: (kind: SubmitKind) => void;
   onToggleAutoContext: () => void;
@@ -27,12 +31,15 @@ export interface ComposerProps {
 }
 
 export function Composer({
+  fileAttachments,
   contextItems,
   input,
   models,
+  onAttachFiles,
   onInputChange,
   onModelChange,
   onModeChange,
+  onRemoveFileAttachment,
   onStop,
   onSubmit,
   onToggleAutoContext,
@@ -59,6 +66,7 @@ export function Composer({
   }, [input]);
 
   const primarySubmit = resolveEnterAction(settings, running, 'Enter') ?? 'userMessage';
+  const canSubmit = Boolean(input.trim() || fileAttachments.length > 0);
   const chooseCommand = (option: CommandOption) => {
     const nextInput =
       option.kind === 'mention'
@@ -115,12 +123,12 @@ export function Composer({
           }
           if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
-            if (input.trim()) onSubmit(primarySubmit);
+            if (canSubmit) onSubmit(primarySubmit);
           } else if (
             event.key === 'Tab' &&
             visibleCommandOptions.length === 0 &&
             running &&
-            input.trim()
+            canSubmit
           ) {
             event.preventDefault();
             const action = resolveEnterAction(settings, running, 'Tab');
@@ -132,10 +140,12 @@ export function Composer({
         rows={1}
         value={input}
       />
+      <FileAttachments items={fileAttachments} onRemove={onRemoveFileAttachment} />
       <ComposerToolbar
-        canSend={Boolean(input.trim())}
+        canSend={canSubmit}
         models={models}
-        onAttach={() => onInputChange(`${input}@`)}
+        onAddContext={() => onInputChange(`${input}@`)}
+        onAttachFiles={onAttachFiles}
         onModelChange={onModelChange}
         onModeChange={onModeChange}
         onSend={() => onSubmit(primarySubmit)}

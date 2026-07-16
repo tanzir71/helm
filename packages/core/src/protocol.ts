@@ -168,6 +168,7 @@ export type WebviewToHostMessage =
       reasoningEffort: 'low' | 'medium' | 'high';
     }
   | { type: 'requestContextItems'; kind: 'file' | 'folder'; query: string }
+  | { type: 'requestFileAttachments' }
   | { type: 'setAutoContext'; enabled: boolean }
   | { type: 'resumeQueue' }
   | { type: 'clearQueue' }
@@ -217,6 +218,7 @@ export type HostToWebviewMessage =
     }
   | { type: 'modelsUpdated'; provider: string; models: Array<{ id: string; label: string }> }
   | { type: 'contextItems'; kind: 'file' | 'folder'; items: string[] }
+  | { type: 'fileAttachmentsSelected'; items: string[] }
   | { type: 'goalChanged'; goal?: string }
   | { type: 'planChanged'; plan?: PlanState }
   | { type: 'fullAccessConfirmationRequired' }

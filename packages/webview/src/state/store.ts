@@ -73,6 +73,7 @@ export interface UiState {
   codeGraphConsent: { gitRepository: boolean } | undefined;
   skillsSettings: SkillSettingsState;
   pendingConfirmation: PendingConfirmation | undefined;
+  fileAttachments: string[];
   eventSequence: number;
 }
 
@@ -126,6 +127,7 @@ export const initialUiState: UiState = {
   codeGraphConsent: undefined,
   skillsSettings: { items: [], errors: [] },
   pendingConfirmation: undefined,
+  fileAttachments: [],
   eventSequence: 0,
 };
 
@@ -136,6 +138,8 @@ export type UiAction =
   | { type: 'noticeDismissed'; id: number }
   | { type: 'suggestionsCleared' }
   | { type: 'contextItemsCleared' }
+  | { type: 'fileAttachmentRemoved'; reference: string }
+  | { type: 'fileAttachmentsCleared' }
   | { type: 'connectionTestStarted'; provider: string }
   | { type: 'toolApprovalHandled'; id: string }
   | { type: 'diffHandled'; id: string }
@@ -188,6 +192,7 @@ function reduceHostMessage(state: UiState, message: HostToWebviewMessage): UiSta
         suggestions: [],
         tools: [],
         diffs: [],
+        fileAttachments: [],
       };
     case 'messageAdded':
       return { ...state, messages: upsertMessage(state.messages, message.message) };
@@ -378,6 +383,11 @@ function reduceHostMessage(state: UiState, message: HostToWebviewMessage): UiSta
           item.includes(' ') ? `@${message.kind}:"${item}"` : `@${message.kind}:${item}`,
         ),
       };
+    case 'fileAttachmentsSelected':
+      return {
+        ...state,
+        fileAttachments: [...new Set([...state.fileAttachments, ...message.items])],
+      };
     case 'connectionResult':
       return {
         ...state,
@@ -470,6 +480,15 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
       return { ...state, suggestions: [] };
     case 'contextItemsCleared':
       return { ...state, contextItems: [] };
+    case 'fileAttachmentRemoved':
+      return {
+        ...state,
+        fileAttachments: state.fileAttachments.filter(
+          (reference) => reference !== action.reference,
+        ),
+      };
+    case 'fileAttachmentsCleared':
+      return { ...state, fileAttachments: [] };
     case 'connectionTestStarted': {
       const connectionResults = { ...state.connectionResults };
       delete connectionResults[action.provider];

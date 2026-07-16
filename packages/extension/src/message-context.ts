@@ -18,3 +18,14 @@ export function workspaceRelativePath(
 export function fileContextReference(relativePath: string): string {
   return relativePath.includes(' ') ? `@file:"${relativePath}"` : `@file:${relativePath}`;
 }
+
+export function fileContextReferences(workspaceRoot: string, candidatePaths: string[]): string[] {
+  return [
+    ...new Set(
+      candidatePaths.flatMap((candidatePath) => {
+        const relativePath = workspaceRelativePath(workspaceRoot, candidatePath);
+        return relativePath ? [fileContextReference(relativePath)] : [];
+      }),
+    ),
+  ];
+}

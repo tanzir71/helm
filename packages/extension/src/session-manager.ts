@@ -34,7 +34,11 @@ import * as vscode from 'vscode';
 
 import { createRestoreMessages } from './restore-messages.js';
 import { CodeGraphService } from './codegraph-service.js';
-import { fileContextReference, workspaceRelativePath } from './message-context.js';
+import {
+  fileContextReference,
+  fileContextReferences,
+  workspaceRelativePath,
+} from './message-context.js';
 import {
   importSkillsFolder,
   importSkillsFromGit,
@@ -601,6 +605,29 @@ export class SessionManager implements vscode.Disposable {
       case 'requestContextItems':
         await this.requestContextItems(message.kind, message.query);
         break;
+      case 'requestFileAttachments': {
+        const selected = await vscode.window.showOpenDialog({
+          canSelectFiles: true,
+          canSelectFolders: false,
+          canSelectMany: true,
+          defaultUri: this.workspaceRoot,
+          openLabel: 'Attach files',
+          title: 'Attach workspace files to your next message',
+        });
+        if (!selected?.length) break;
+        const items = fileContextReferences(
+          this.workspaceRoot.fsPath,
+          selected.map((uri) => uri.fsPath),
+        );
+        if (selected.some((uri) => !workspaceRelativePath(this.workspaceRoot.fsPath, uri.fsPath))) {
+          this.post({
+            type: 'error',
+            message: 'Helm can only attach files from the current workspace.',
+          });
+        }
+        if (items.length > 0) this.post({ type: 'fileAttachmentsSelected', items });
+        break;
+      }
       case 'setAutoContext':
         this.session.autoContext = message.enabled;
         await this.persist();

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { fileContextReference, workspaceRelativePath } from '../src/message-context.js';
+import {
+  fileContextReference,
+  fileContextReferences,
+  workspaceRelativePath,
+} from '../src/message-context.js';
 
 describe('message context', () => {
   it('creates a visible active-file reference inside the workspace', () => {
@@ -10,5 +14,16 @@ describe('message context', () => {
 
   it('does not attach files outside the workspace', () => {
     expect(workspaceRelativePath('/workspace', '/other/secret.ts')).toBeUndefined();
+  });
+
+  it('builds deduplicated attachment references for workspace files only', () => {
+    expect(
+      fileContextReferences('/workspace', [
+        '/workspace/src/main.ts',
+        '/workspace/src/shared file.ts',
+        '/workspace/src/main.ts',
+        '/other/secret.ts',
+      ]),
+    ).toEqual(['@file:src/main.ts', '@file:"src/shared file.ts"']);
   });
 });

@@ -7,7 +7,8 @@ import { ModelPill } from './ModelPill';
 export interface ComposerToolbarProps {
   canSend: boolean;
   models: ReadonlyArray<{ id: string; label: string }>;
-  onAttach: () => void;
+  onAddContext: () => void;
+  onAttachFiles: () => void;
   onModelChange: (modelId: string, effort: SessionSettings['reasoningEffort']) => void;
   onModeChange: (mode: ApprovalMode) => void;
   onSend: () => void;
@@ -20,7 +21,8 @@ export interface ComposerToolbarProps {
 export function ComposerToolbar({
   canSend,
   models,
-  onAttach,
+  onAddContext,
+  onAttachFiles,
   onModelChange,
   onModeChange,
   onSend,
@@ -33,10 +35,19 @@ export function ComposerToolbar({
     <div className="flex min-w-0 items-center gap-1 px-1 pb-1" data-helm-composer-toolbar="true">
       <div className="flex shrink-0 items-center gap-0.5">
         <button
-          aria-label="Attach context"
+          aria-label="Attach files"
           className="flex size-6 items-center justify-center rounded-[var(--helm-radius-control)] border-0 bg-transparent p-0 hover:bg-[var(--helm-toolbar-hover)]"
-          onClick={onAttach}
-          title="Attach context"
+          onClick={onAttachFiles}
+          title="Attach workspace files"
+          type="button"
+        >
+          <Icon name="files" />
+        </button>
+        <button
+          aria-label="Add context reference"
+          className="flex size-6 items-center justify-center rounded-[var(--helm-radius-control)] border-0 bg-transparent p-0 hover:bg-[var(--helm-toolbar-hover)]"
+          onClick={onAddContext}
+          title="Add @ context reference"
           type="button"
         >
           <Icon name="mention" />

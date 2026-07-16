@@ -102,4 +102,23 @@ describe('uiReducer', () => {
     });
     expect(result.notice).toBeUndefined();
   });
+
+  it('adds, deduplicates, removes, and clears selected file attachments', () => {
+    const selected = uiReducer(initialUiState, {
+      type: 'hostMessage',
+      message: {
+        type: 'fileAttachmentsSelected',
+        items: ['@file:src/main.ts', '@file:"src/shared file.ts"', '@file:src/main.ts'],
+      },
+    });
+    expect(selected.fileAttachments).toEqual(['@file:src/main.ts', '@file:"src/shared file.ts"']);
+
+    const removed = uiReducer(selected, {
+      type: 'fileAttachmentRemoved',
+      reference: '@file:src/main.ts',
+    });
+    expect(removed.fileAttachments).toEqual(['@file:"src/shared file.ts"']);
+
+    expect(uiReducer(removed, { type: 'fileAttachmentsCleared' }).fileAttachments).toEqual([]);
+  });
 });

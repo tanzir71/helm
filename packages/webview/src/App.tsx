@@ -9,6 +9,7 @@ import {
 import { useCallback, useEffect, useReducer } from 'react';
 
 import { Composer, type SubmitKind } from './components/Composer/Composer';
+import { composeMessageWithAttachments } from './components/Composer/file-attachments';
 import { CodeGraphNotice } from './components/CodeGraphNotice';
 import { QueueStrip } from './components/Composer/QueueStrip';
 import { SuggestionRow } from './components/Composer/SuggestionRow';
@@ -139,10 +140,10 @@ export function App(): React.JSX.Element {
     return () => window.clearTimeout(id);
   }, [state.notice]);
 
-  const send = (kind: SubmitKind, text = state.input) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    const clientCommand = resolveClientCommand(trimmed);
+  const send = (kind: SubmitKind, text?: string) => {
+    const usesComposer = text === undefined;
+    const trimmed = (text ?? state.input).trim();
+    const clientCommand = trimmed ? resolveClientCommand(trimmed) : undefined;
     if (clientCommand === 'openSettings' || clientCommand === 'openSkills') {
       dispatch({
         type: 'settingsVisibilityChanged',
@@ -153,8 +154,14 @@ export function App(): React.JSX.Element {
       dispatch({ type: 'suggestionsCleared' });
       return;
     }
-    vscode.postMessage({ type: kind, id: crypto.randomUUID(), text: trimmed });
+    const submittedText = composeMessageWithAttachments(
+      trimmed,
+      usesComposer ? state.fileAttachments : [],
+    );
+    if (!submittedText) return;
+    vscode.postMessage({ type: kind, id: crypto.randomUUID(), text: submittedText });
     dispatch({ type: 'inputChanged', value: '' });
+    if (usesComposer) dispatch({ type: 'fileAttachmentsCleared' });
     dispatch({ type: 'suggestionsCleared' });
   };
 
@@ -363,8 +370,10 @@ export function App(): React.JSX.Element {
         <SuggestionRow items={suggestions} onChoose={chooseSuggestion} />
         <Composer
           contextItems={state.contextItems}
+          fileAttachments={state.fileAttachments}
           input={state.input}
           models={models}
+          onAttachFiles={() => vscode.postMessage({ type: 'requestFileAttachments' })}
           onInputChange={(value) => dispatch({ type: 'inputChanged', value })}
           onModelChange={(modelId, reasoningEffort) =>
             saveProviderSettings(
@@ -375,6 +384,9 @@ export function App(): React.JSX.Element {
             )
           }
           onModeChange={(mode: ApprovalMode) => vscode.postMessage({ type: 'setMode', mode })}
+          onRemoveFileAttachment={(reference) =>
+            dispatch({ type: 'fileAttachmentRemoved', reference })
+          }
           onStop={() => vscode.postMessage({ type: 'stopRun' })}
           onSubmit={send}
           onToggleAutoContext={() =>
