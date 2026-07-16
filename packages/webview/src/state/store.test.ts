@@ -66,4 +66,39 @@ describe('uiReducer', () => {
 
     expect(result.settings.goal).toBeUndefined();
   });
+
+  it('keeps exactly one notice and replaces it with the newest event', () => {
+    const compacted = uiReducer(initialUiState, {
+      type: 'hostMessage',
+      message: { type: 'compacted', tokensBefore: 12_000, tokensAfter: 4_000 },
+    });
+    const failed = uiReducer(compacted, {
+      type: 'hostMessage',
+      message: { type: 'error', message: 'The request failed.' },
+    });
+
+    expect(compacted.notice?.level).toBe('info');
+    expect(failed.notice).toEqual({
+      id: compacted.eventSequence + 1,
+      level: 'error',
+      message: 'The request failed.',
+    });
+  });
+
+  it('keeps provider connection feedback available inside settings', () => {
+    const result = uiReducer(initialUiState, {
+      type: 'hostMessage',
+      message: {
+        type: 'connectionResult',
+        provider: 'openai',
+        ok: false,
+        message: 'Invalid API key',
+      },
+    });
+
+    expect(result.connectionResults.openai).toEqual({
+      ok: false,
+      message: 'Invalid API key',
+    });
+  });
 });

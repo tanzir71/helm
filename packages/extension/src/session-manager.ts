@@ -26,6 +26,7 @@ import {
 } from '@helm/core';
 import * as vscode from 'vscode';
 
+import { createRestoreMessages } from './restore-messages.js';
 import { ExtensionToolHost } from './tool-host.js';
 
 function promptSuggestions(labels: string[]): SuggestedAction[] {
@@ -60,6 +61,7 @@ export class SessionManager implements vscode.Disposable {
   private running = false;
   private disposed = false;
   private testResolvedModel: ResolvedModel | undefined;
+  private readonly connectedProviders = new Set<string>();
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -305,6 +307,9 @@ export class SessionManager implements vscode.Disposable {
       case 'rejectDiff':
         this.toolHost.resolveDiff(message.diffId, false);
         break;
+      case 'openDiff':
+        await this.toolHost.openDiff(message.diffId);
+        break;
       case 'undoLastChange':
         this.post(
           (await this.toolHost.undoLast())
@@ -346,6 +351,11 @@ export class SessionManager implements vscode.Disposable {
         await this.context.secrets.store(secretKey(message.provider), message.key);
         this.postSettings();
         break;
+      case 'removeApiKey':
+        await this.context.secrets.delete(secretKey(message.provider));
+        this.connectedProviders.delete(message.provider);
+        this.postSettings();
+        break;
       case 'saveProviderSettings':
         if (!isProviderId(message.provider)) break;
         this.session.provider = message.provider;
@@ -366,6 +376,24 @@ export class SessionManager implements vscode.Disposable {
       case 'requestModels':
         await this.requestModels(message.provider, message.baseURL, message.key);
         break;
+      case 'saveDefaults': {
+        const configuration = vscode.workspace.getConfiguration('helm');
+        await configuration.update(
+          'enterBehavior',
+          message.enterBehavior,
+          vscode.ConfigurationTarget.Workspace,
+        );
+        await configuration.update(
+          'utilityModel',
+          message.utilityModel,
+          vscode.ConfigurationTarget.Workspace,
+        );
+        this.session.modelId = message.modelId;
+        this.session.reasoningEffort = message.reasoningEffort;
+        await this.persist();
+        await this.setMode(message.mode);
+        break;
+      }
       case 'requestContextItems':
         await this.requestContextItems(message.kind, message.query);
         break;
@@ -388,13 +416,13 @@ export class SessionManager implements vscode.Disposable {
   }
 
   private async restore(): Promise<void> {
-    this.post({ type: 'hello', version: '0.1.0' });
-    this.post({
-      type: 'sessionRestored',
-      messages: this.session.messages,
-      settings: this.settings(),
-    });
-    this.post({ type: 'runStateChanged', state: this.running ? 'running' : 'idle' });
+    for (const message of createRestoreMessages(
+      this.session.messages,
+      this.settings(),
+      this.running,
+    )) {
+      this.post(message);
+    }
     this.postQueue();
     this.postSettings();
   }
@@ -796,7 +824,9 @@ export class SessionManager implements vscode.Disposable {
         ok: true,
         message: 'Connection works.',
       });
+      this.connectedProviders.add(providerName);
     } catch (error) {
+      this.connectedProviders.delete(providerName);
       this.post({
         type: 'connectionResult',
         provider: providerName,
@@ -805,6 +835,7 @@ export class SessionManager implements vscode.Disposable {
       });
     } finally {
       clearTimeout(timer);
+      await this.postSettings();
     }
   }
 
@@ -1091,6 +1122,7 @@ export class SessionManager implements vscode.Disposable {
     const enterBehavior = vscode.workspace
       .getConfiguration('helm')
       .get<'queue' | 'steer'>('enterBehavior', 'queue');
+    const utilityModel = vscode.workspace.getConfiguration('helm').get<string>('utilityModel', '');
     return {
       provider: this.session.provider,
       modelId: this.session.modelId,
@@ -1098,6 +1130,7 @@ export class SessionManager implements vscode.Disposable {
       enterBehavior,
       autoContext: this.session.autoContext !== false,
       reasoningEffort: this.session.reasoningEffort ?? 'medium',
+      ...(utilityModel ? { utilityModel } : {}),
       ...(this.session.baseURL ? { baseURL: this.session.baseURL } : {}),
       ...(this.session.goal ? { goal: this.session.goal } : {}),
       ...(this.session.plan ? { plan: this.session.plan } : {}),
@@ -1105,10 +1138,28 @@ export class SessionManager implements vscode.Disposable {
   }
 
   private async postSettings(): Promise<void> {
-    const hasApiKey =
-      this.session.provider === 'ollama' ||
-      Boolean(await this.context.secrets.get(secretKey(this.session.provider)));
-    this.post({ type: 'settingsChanged', settings: this.settings(), hasApiKey });
+    const providerKeys = Object.fromEntries(
+      await Promise.all(
+        Object.keys(STATIC_MODELS).map(async (provider) => {
+          const key = await this.context.secrets.get(secretKey(provider));
+          const configured = provider === 'ollama' || Boolean(key);
+          return [
+            provider,
+            {
+              configured,
+              connected: this.connectedProviders.has(provider),
+              masked: key ? maskApiKey(key) : provider === 'ollama' ? 'No key required' : '',
+            },
+          ] as const;
+        }),
+      ),
+    );
+    this.post({
+      type: 'settingsChanged',
+      settings: this.settings(),
+      hasApiKey: providerKeys[this.session.provider]?.configured ?? false,
+      providerKeys,
+    });
   }
 
   private postQueue(): void {
@@ -1138,6 +1189,11 @@ export class SessionManager implements vscode.Disposable {
 
 function secretKey(provider: string): string {
   return `helm.apiKey.${provider}`;
+}
+
+function maskApiKey(key: string): string {
+  if (key.length <= 8) return 'Saved securely';
+  return `${key.slice(0, 3)}…${key.slice(-4)}`;
 }
 
 function isProviderId(value: string): value is ProviderId {

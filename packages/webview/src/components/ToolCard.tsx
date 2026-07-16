@@ -11,7 +11,7 @@ export interface ToolCardProps {
   tool: UiTool;
 }
 
-function toolIcon(name: string): IconName {
+export function toolIcon(name: string): IconName {
   if (name === 'run_command') return 'terminal';
   if (name === 'grep' || name === 'glob') return 'search';
   if (name === 'list_dir') return 'folder';
@@ -21,7 +21,7 @@ function toolIcon(name: string): IconName {
   return 'file';
 }
 
-function friendlyToolName(name: string, input: unknown): string {
+export function friendlyToolName(name: string, input: unknown): string {
   const record = typeof input === 'object' && input !== null ? input : {};
   const pathValue = Reflect.get(record, 'path');
   const commandValue = Reflect.get(record, 'command');

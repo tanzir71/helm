@@ -1,15 +1,17 @@
-import type { SessionSettings } from '@helm/core/browser';
+import type { ApprovalMode, ProviderKeyState, SessionSettings } from '@helm/core/browser';
 
 import { Icon } from '../Icon';
 import { CodeGraphSection } from './CodeGraphSection';
+import { DefaultsSection } from './DefaultsSection';
 import { ProviderSection } from './ProviderSection';
 import { SkillsSection } from './SkillsSection';
 import { WebSection } from './WebSection';
 
 export interface SettingsViewProps {
-  hasApiKey: boolean;
+  connectionResults: Record<string, { message: string; ok: boolean }>;
   modelsByProvider: Record<string, Array<{ id: string; label: string }>>;
   onBack: () => void;
+  onRemoveApiKey: (provider: string) => void;
   onRequestModels: (provider: string, baseURL: string, key?: string) => void;
   onSaveApiKey: (provider: string, key: string) => void;
   onSaveProviderSettings: (
@@ -18,18 +20,29 @@ export interface SettingsViewProps {
     baseURL: string,
     reasoningEffort: SessionSettings['reasoningEffort'],
   ) => void;
+  onSaveDefaults: (defaults: {
+    enterBehavior: SessionSettings['enterBehavior'];
+    mode: ApprovalMode;
+    utilityModel: string;
+    modelId: string;
+    reasoningEffort: SessionSettings['reasoningEffort'];
+  }) => void;
   onTestConnection: (provider: string, modelId: string, baseURL: string, key?: string) => void;
+  providerKeyStates: Record<string, ProviderKeyState>;
   settings: SessionSettings;
 }
 
 export function SettingsView({
-  hasApiKey,
+  connectionResults,
   modelsByProvider,
   onBack,
+  onRemoveApiKey,
   onRequestModels,
   onSaveApiKey,
+  onSaveDefaults,
   onSaveProviderSettings,
   onTestConnection,
+  providerKeyStates,
   settings,
 }: SettingsViewProps): React.JSX.Element {
   return (
@@ -46,14 +59,17 @@ export function SettingsView({
       </header>
       <div className="min-h-0 min-w-0 flex-1 overflow-y-auto p-3">
         <ProviderSection
-          hasApiKey={hasApiKey}
+          connectionResults={connectionResults}
           modelsByProvider={modelsByProvider}
+          onRemoveApiKey={onRemoveApiKey}
           onRequestModels={onRequestModels}
           onSaveApiKey={onSaveApiKey}
           onSaveSettings={onSaveProviderSettings}
           onTestConnection={onTestConnection}
+          providerKeyStates={providerKeyStates}
           settings={settings}
         />
+        <DefaultsSection onSave={onSaveDefaults} settings={settings} />
         <WebSection />
         <SkillsSection />
         <CodeGraphSection />

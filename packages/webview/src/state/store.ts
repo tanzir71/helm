@@ -2,6 +2,7 @@ import type {
   ChatMessage,
   HostToWebviewMessage,
   PlanState,
+  ProviderKeyState,
   RunState,
   SessionSettings,
   SuggestedAction,
@@ -29,6 +30,11 @@ export interface UiNotice {
   message: string;
 }
 
+export interface UiConnectionResult {
+  message: string;
+  ok: boolean;
+}
+
 export type PendingConfirmation =
   | { id: number; kind: 'fullAccess'; message: string }
   | { id: number; kind: 'clearSession'; message: string };
@@ -53,6 +59,8 @@ export interface UiState {
   plan: PlanState | undefined;
   contextItems: string[];
   modelsByProvider: Record<string, Array<{ id: string; label: string }>>;
+  providerKeyStates: Record<string, ProviderKeyState>;
+  connectionResults: Record<string, UiConnectionResult>;
   pendingConfirmation: PendingConfirmation | undefined;
   eventSequence: number;
 }
@@ -86,6 +94,8 @@ export const initialUiState: UiState = {
   plan: undefined,
   contextItems: [],
   modelsByProvider: {},
+  providerKeyStates: {},
+  connectionResults: {},
   pendingConfirmation: undefined,
   eventSequence: 0,
 };
@@ -97,6 +107,7 @@ export type UiAction =
   | { type: 'noticeDismissed'; id: number }
   | { type: 'suggestionsCleared' }
   | { type: 'contextItemsCleared' }
+  | { type: 'connectionTestStarted'; provider: string }
   | { type: 'toolApprovalHandled'; id: string }
   | { type: 'diffHandled'; id: string }
   | { type: 'confirmationHandled'; id: number };
@@ -271,6 +282,7 @@ function reduceHostMessage(state: UiState, message: HostToWebviewMessage): UiSta
         settings: message.settings,
         plan: message.settings.plan,
         hasApiKey: message.hasApiKey,
+        providerKeyStates: message.providerKeys,
       };
     case 'modelsUpdated':
       return {
@@ -287,6 +299,10 @@ function reduceHostMessage(state: UiState, message: HostToWebviewMessage): UiSta
     case 'connectionResult':
       return {
         ...state,
+        connectionResults: {
+          ...state.connectionResults,
+          [message.provider]: { ok: message.ok, message: message.message },
+        },
         ...nextNotice(
           state,
           message.ok ? 'info' : 'error',
@@ -373,6 +389,11 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
       return { ...state, suggestions: [] };
     case 'contextItemsCleared':
       return { ...state, contextItems: [] };
+    case 'connectionTestStarted': {
+      const connectionResults = { ...state.connectionResults };
+      delete connectionResults[action.provider];
+      return { ...state, connectionResults };
+    }
     case 'toolApprovalHandled':
       return {
         ...state,

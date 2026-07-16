@@ -93,6 +93,12 @@ export class ExtensionToolHost implements ToolHost, vscode.Disposable {
     pending?.resolve(accepted);
   }
 
+  async openDiff(diffId: string): Promise<void> {
+    const pending = this.diffs.get(diffId);
+    if (!pending) return;
+    await this.showDiff(diffId, pending.relativePath, pending.before, pending.after);
+  }
+
   async acceptNextPendingDiffForTest(timeoutMs = 5_000): Promise<void> {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
@@ -281,20 +287,7 @@ export class ExtensionToolHost implements ToolHost, vscode.Disposable {
     signal?: AbortSignal,
   ): Promise<void> {
     const diffId = crypto.randomUUID();
-    const beforeUri = vscode.Uri.parse(
-      `helm-diff:/before/${diffId}/${encodeURIComponent(relativePath)}`,
-    );
-    const afterUri = vscode.Uri.parse(
-      `helm-diff:/after/${diffId}/${encodeURIComponent(relativePath)}`,
-    );
-    this.diffProvider.set(beforeUri, before);
-    this.diffProvider.set(afterUri, after);
-    await vscode.commands.executeCommand(
-      'vscode.diff',
-      beforeUri,
-      afterUri,
-      `Helm: ${relativePath}`,
-    );
+    await this.showDiff(diffId, relativePath, before, after);
     let accepted = mode === 'fullAccess';
     if (!accepted) {
       accepted = await new Promise<boolean>((resolve) => {
@@ -321,6 +314,28 @@ export class ExtensionToolHost implements ToolHost, vscode.Disposable {
       type: 'suggestionAvailable',
       item: { kind: 'undo', label: `Undo ${relativePath}` },
     });
+  }
+
+  private async showDiff(
+    diffId: string,
+    relativePath: string,
+    before: string,
+    after: string,
+  ): Promise<void> {
+    const beforeUri = vscode.Uri.parse(
+      `helm-diff:/before/${diffId}/${encodeURIComponent(relativePath)}`,
+    );
+    const afterUri = vscode.Uri.parse(
+      `helm-diff:/after/${diffId}/${encodeURIComponent(relativePath)}`,
+    );
+    this.diffProvider.set(beforeUri, before);
+    this.diffProvider.set(afterUri, after);
+    await vscode.commands.executeCommand(
+      'vscode.diff',
+      beforeUri,
+      afterUri,
+      `Helm: ${relativePath}`,
+    );
   }
 
   private async checkpoint(label: string, uri: vscode.Uri, before: string): Promise<void> {

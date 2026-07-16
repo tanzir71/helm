@@ -11,7 +11,7 @@ import { useCallback, useEffect, useReducer } from 'react';
 import { Composer, type SubmitKind } from './components/Composer/Composer';
 import { QueueStrip } from './components/Composer/QueueStrip';
 import { SuggestionRow } from './components/Composer/SuggestionRow';
-import { DiffCard } from './components/DiffCard';
+import { DiffGroup } from './components/DiffGroup';
 import { EmptyState } from './components/EmptyState';
 import { GoalBanner } from './components/GoalBanner';
 import { Header } from './components/Header';
@@ -19,13 +19,16 @@ import { Notice } from './components/Notice';
 import { PlanCard } from './components/PlanCard';
 import { SettingsView } from './components/Settings/SettingsView';
 import { ToolCard } from './components/ToolCard';
+import { ToolGroupCard } from './components/ToolGroupCard';
 import { Transcript } from './components/Transcript';
+import { groupConsecutiveTools } from './components/tool-groups';
 import {
   selectIsRunning,
   selectStreamingMessage,
   selectTokenLabel,
   selectVisibleSuggestions,
 } from './state/selectors';
+import { resolveClientCommand } from './state/client-command';
 import { initialUiState, uiReducer } from './state/store';
 import { vscode } from './vscode';
 
@@ -65,6 +68,7 @@ export function App(): React.JSX.Element {
   const pendingTool = [...state.tools]
     .reverse()
     .find((tool) => tool.ok === undefined && !tool.approval);
+  const toolDisplayItems = groupConsecutiveTools(state.tools);
   const status =
     running && (pendingTool || !streamingMessage?.text)
       ? pendingTool
@@ -118,7 +122,7 @@ export function App(): React.JSX.Element {
   const send = (kind: SubmitKind, text = state.input) => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    if (trimmed === '/model') {
+    if (resolveClientCommand(trimmed) === 'openSettings') {
       dispatch({ type: 'settingsVisibilityChanged', open: true });
       dispatch({ type: 'inputChanged', value: '' });
       dispatch({ type: 'suggestionsCleared' });
@@ -162,6 +166,7 @@ export function App(): React.JSX.Element {
 
   const testConnection = useCallback(
     (provider: string, modelId: string, baseURL: string, key?: string) => {
+      dispatch({ type: 'connectionTestStarted', provider });
       vscode.postMessage({
         type: 'testConnection',
         provider,
@@ -184,13 +189,16 @@ export function App(): React.JSX.Element {
     return (
       <main className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
         <SettingsView
-          hasApiKey={state.hasApiKey}
+          connectionResults={state.connectionResults}
           modelsByProvider={state.modelsByProvider}
           onBack={() => dispatch({ type: 'settingsVisibilityChanged', open: false })}
+          onRemoveApiKey={(provider) => vscode.postMessage({ type: 'removeApiKey', provider })}
           onRequestModels={requestModels}
           onSaveApiKey={saveApiKey}
+          onSaveDefaults={(defaults) => vscode.postMessage({ type: 'saveDefaults', ...defaults })}
           onSaveProviderSettings={saveProviderSettings}
           onTestConnection={testConnection}
+          providerKeyStates={state.providerKeyStates}
           settings={state.settings}
         />
       </main>
@@ -232,39 +240,38 @@ export function App(): React.JSX.Element {
             }}
           />
         )}
-        {state.tools.map((tool) => (
-          <ToolCard
-            key={tool.id}
-            onApprove={(always) => {
-              vscode.postMessage({
-                type: 'approveTool',
-                callId: tool.id,
-                ...(always && tool.approval
-                  ? { alwaysAllowPattern: commandPattern(tool.approval) }
-                  : {}),
-              });
-              dispatch({ type: 'toolApprovalHandled', id: tool.id });
-            }}
-            onReject={() => {
-              vscode.postMessage({ type: 'rejectTool', callId: tool.id });
-              dispatch({ type: 'toolApprovalHandled', id: tool.id });
-            }}
-            tool={tool}
-          />
-        ))}
-        {state.diffs.map((diff) => (
-          <DiffCard
-            diff={diff}
-            key={diff.id}
-            onDecide={(accepted) => {
-              vscode.postMessage({
-                type: accepted ? 'applyDiff' : 'rejectDiff',
-                diffId: diff.id,
-              });
-              dispatch({ type: 'diffHandled', id: diff.id });
-            }}
-          />
-        ))}
+        {toolDisplayItems.map((item) => {
+          if (item.kind === 'group') return <ToolGroupCard key={item.key} tools={item.tools} />;
+          const { tool } = item;
+          return (
+            <ToolCard
+              key={item.key}
+              onApprove={(always) => {
+                vscode.postMessage({
+                  type: 'approveTool',
+                  callId: tool.id,
+                  ...(always && tool.approval
+                    ? { alwaysAllowPattern: commandPattern(tool.approval) }
+                    : {}),
+                });
+                dispatch({ type: 'toolApprovalHandled', id: tool.id });
+              }}
+              onReject={() => {
+                vscode.postMessage({ type: 'rejectTool', callId: tool.id });
+                dispatch({ type: 'toolApprovalHandled', id: tool.id });
+              }}
+              tool={tool}
+            />
+          );
+        })}
+        <DiffGroup
+          diffs={state.diffs}
+          onDecide={(id, accepted) => {
+            vscode.postMessage({ type: accepted ? 'applyDiff' : 'rejectDiff', diffId: id });
+            dispatch({ type: 'diffHandled', id });
+          }}
+          onOpen={(id) => vscode.postMessage({ type: 'openDiff', diffId: id })}
+        />
         {state.plan && state.plan.steps.length > 0 && (
           <PlanCard
             onDismiss={() => vscode.postMessage({ type: 'dismissPlan' })}

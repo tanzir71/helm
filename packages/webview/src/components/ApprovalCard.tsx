@@ -9,6 +9,15 @@ export interface ApprovalCardProps {
   onDeny: () => void;
 }
 
+export function resolveApprovalShortcut(event: {
+  altKey: boolean;
+  key: string;
+}): 'allow' | 'deny' | undefined {
+  if (event.key === 'Escape') return 'deny';
+  if (event.key === 'Enter' && event.altKey) return 'allow';
+  return undefined;
+}
+
 export function ApprovalCard({ detail, onAllow, onDeny }: ApprovalCardProps): React.JSX.Element {
   const cardRef = useRef<HTMLElement>(null);
 
@@ -20,10 +29,11 @@ export function ApprovalCard({ detail, onAllow, onDeny }: ApprovalCardProps): Re
       aria-live="assertive"
       className="border-[var(--helm-warning)]"
       onKeyDown={(event) => {
-        if (event.key === 'Escape') {
+        const action = resolveApprovalShortcut(event);
+        if (action === 'deny') {
           event.preventDefault();
           onDeny();
-        } else if (event.key === 'Enter' && event.altKey) {
+        } else if (action === 'allow') {
           event.preventDefault();
           onAllow(false);
         }

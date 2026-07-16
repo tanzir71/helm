@@ -47,6 +47,11 @@ export function getCommandOptions(input: string, contextItems: string[]): Comman
   }));
 }
 
+export function moveCommandIndex(current: number, delta: number, optionCount: number): number {
+  if (optionCount === 0) return 0;
+  return (current + delta + optionCount) % optionCount;
+}
+
 function highlightedLabel(label: string, input: string): ReactNode {
   const query = input.startsWith('/')
     ? input.slice(1)

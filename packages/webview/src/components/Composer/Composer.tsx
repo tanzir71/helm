@@ -1,8 +1,14 @@
 import { resolveEnterAction, type ApprovalMode, type SessionSettings } from '@helm/core/browser';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { CommandPopover, getCommandOptions, type CommandOption } from './CommandPopover';
+import {
+  CommandPopover,
+  getCommandOptions,
+  moveCommandIndex,
+  type CommandOption,
+} from './CommandPopover';
 import { ComposerToolbar } from './ComposerToolbar';
+import { resizeComposerTextarea } from './textarea-layout';
 
 export type SubmitKind = 'userMessage' | 'queueMessage' | 'steerMessage';
 
@@ -49,8 +55,7 @@ export function Composer({
   useLayoutEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
-    textarea.style.height = '0px';
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`;
+    resizeComposerTextarea(textarea);
   }, [input]);
 
   const primarySubmit = resolveEnterAction(settings, running, 'Enter') ?? 'userMessage';
@@ -88,9 +93,8 @@ export function Composer({
             if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
               event.preventDefault();
               const delta = event.key === 'ArrowDown' ? 1 : -1;
-              setActiveCommandIndex(
-                (current) =>
-                  (current + delta + visibleCommandOptions.length) % visibleCommandOptions.length,
+              setActiveCommandIndex((current) =>
+                moveCommandIndex(current, delta, visibleCommandOptions.length),
               );
               return;
             }

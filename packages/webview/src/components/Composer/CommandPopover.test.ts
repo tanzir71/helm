@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { getCommandOptions } from './CommandPopover';
+import { getCommandOptions, moveCommandIndex } from './CommandPopover';
 
 describe('getCommandOptions', () => {
   it('returns slash commands with typed insertion values', () => {
@@ -21,5 +21,11 @@ describe('getCommandOptions', () => {
         value: '@file:src/store.ts',
       },
     ]);
+  });
+
+  it('wraps keyboard selection in both directions', () => {
+    expect(moveCommandIndex(0, -1, 3)).toBe(2);
+    expect(moveCommandIndex(2, 1, 3)).toBe(0);
+    expect(moveCommandIndex(0, 1, 0)).toBe(0);
   });
 });

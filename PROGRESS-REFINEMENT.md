@@ -2,14 +2,14 @@
 
 ## Current
 
-R3 cards, settings, and empty states — consolidate transcript actions around shared primitives and
-lock the ten audited UI bugs behind regression coverage.
+R4 built-in web tools — add grounded search and safe page fetching as first-class agent tools with
+provider configuration, approvals, transcript UI, and recorded-fixture coverage.
 
-1. Group consecutive read-only tools and complete approval/diff card interactions.
-2. Finish the provider/defaults in-panel settings sections and inline connection state.
-3. Validate key-gated empty states and the native diff-opening path.
-4. Add regression coverage for all ten §3.10 bugs and settings/card state transitions.
-5. Run repository and Electron gates, record evidence, and commit R3.
+1. Add the web search/fetch runtime and pure safety/content-conversion helpers.
+2. Implement Tavily, Brave, Exa, and keyless DuckDuckGo adapters behind one normalized result type.
+3. Register `web_search` and `web_fetch`, including domain approvals and system-prompt guidance.
+4. Complete Settings → Web and the transcript WebCard with external-browser actions.
+5. Add fixtures/eval coverage, run all gates, and commit R4.
 
 ## Milestones
 
@@ -33,11 +33,11 @@ lock the ten audited UI bugs behind regression coverage.
 
 ### R3 — Cards, settings, empty states
 
-- [ ] Shared Card primitive; tool cards with consecutive-read grouping; approval card with keyboard
+- [x] Shared Card primitive; tool cards with consecutive-read grouping; approval card with keyboard
       shortcuts; diff card with counts + preview + Accept all
-- [ ] Settings as in-panel view per §3.9
-- [ ] Empty states per §3.8 (key-gated starters)
-- [ ] All 10 bugs in §3.10 fixed, each with a regression test where automatable
+- [x] Settings as in-panel view per §3.9
+- [x] Empty states per §3.8 (key-gated starters)
+- [x] All 10 bugs in §3.10 fixed, each with a regression test where automatable
 
 ### R4 — Web tools
 
@@ -103,3 +103,7 @@ None yet.
   are keyboard-operable, the transcript uses measured virtualization with user-controlled follow,
   thinking duration and local code overflow are covered, `pnpm verify` is green, and Electron stays
   5/5.
+- [2026-07-16] R3 complete: shared tool/approval/diff cards, grouped reads, multi-file decisions,
+  key-gated empty states, and the in-panel provider/default settings view are implemented. All ten
+  audited regressions have focused coverage where automatable; `pnpm verify` is green and Electron
+  remains 5/5.

@@ -24,6 +24,7 @@ export interface SessionSettings {
   enterBehavior: 'queue' | 'steer';
   autoContext: boolean;
   reasoningEffort: 'low' | 'medium' | 'high';
+  utilityModel?: string;
   goal?: string;
   plan?: PlanState;
 }
@@ -33,6 +34,12 @@ export type SuggestionKind = 'prompt' | 'undo' | 'restoreCheckpoint';
 export interface SuggestedAction {
   kind: SuggestionKind;
   label: string;
+}
+
+export interface ProviderKeyState {
+  configured: boolean;
+  connected: boolean;
+  masked: string;
 }
 
 export type WebviewToHostMessage =
@@ -47,9 +54,11 @@ export type WebviewToHostMessage =
   | { type: 'rejectTool'; callId: string; reason?: string }
   | { type: 'applyDiff'; diffId: string }
   | { type: 'rejectDiff'; diffId: string }
+  | { type: 'openDiff'; diffId: string }
   | { type: 'setMode'; mode: ApprovalMode }
   | { type: 'openSettings' }
   | { type: 'saveApiKey'; provider: string; key: string }
+  | { type: 'removeApiKey'; provider: string }
   | {
       type: 'testConnection';
       provider: string;
@@ -66,6 +75,14 @@ export type WebviewToHostMessage =
       reasoningEffort: 'low' | 'medium' | 'high';
     }
   | { type: 'requestModels'; provider: string; baseURL?: string; key?: string }
+  | {
+      type: 'saveDefaults';
+      mode: ApprovalMode;
+      enterBehavior: 'queue' | 'steer';
+      utilityModel: string;
+      modelId: string;
+      reasoningEffort: 'low' | 'medium' | 'high';
+    }
   | { type: 'requestContextItems'; kind: 'file' | 'folder'; query: string }
   | { type: 'setAutoContext'; enabled: boolean }
   | { type: 'resumeQueue' }
@@ -99,7 +116,12 @@ export type HostToWebviewMessage =
   | { type: 'compacted'; tokensBefore: number; tokensAfter: number }
   | { type: 'tokenUsage'; input: number; output: number; estimatedCost: number }
   | { type: 'connectionResult'; provider: string; ok: boolean; message: string }
-  | { type: 'settingsChanged'; settings: SessionSettings; hasApiKey: boolean }
+  | {
+      type: 'settingsChanged';
+      settings: SessionSettings;
+      hasApiKey: boolean;
+      providerKeys: Record<string, ProviderKeyState>;
+    }
   | { type: 'modelsUpdated'; provider: string; models: Array<{ id: string; label: string }> }
   | { type: 'contextItems'; kind: 'file' | 'folder'; items: string[] }
   | { type: 'goalChanged'; goal?: string }
