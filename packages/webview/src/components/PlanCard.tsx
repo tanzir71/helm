@@ -20,12 +20,18 @@ export function PlanCard({
   plan,
   running,
 }: PlanCardProps): React.JSX.Element {
+  const solo = plan.origin === 'solo';
   return (
     <Card>
       <div className="flex items-center gap-2 font-semibold">
         <Icon name="sparkle" />
-        <span>Plan ready</span>
+        <span>{solo ? 'Solo plan ready' : 'Plan ready'}</span>
       </div>
+      {solo && (
+        <p className="my-1 text-[length:var(--helm-font-size-meta)] text-[var(--helm-description-foreground)]">
+          Approve this plan to make the task your goal and start execution.
+        </p>
+      )}
       <ol className="my-2 grid list-none gap-1 p-0">
         {plan.steps.map((step, index) => (
           <li className="min-w-0" key={`${index}:${step.text}`}>
@@ -52,14 +58,14 @@ export function PlanCard({
           onClick={onExecute}
           type="button"
         >
-          Execute plan
+          {solo ? 'Approve & run' : 'Execute plan'}
         </button>
         <button
           className="rounded-[var(--helm-radius-control)] border border-[var(--helm-border)] bg-transparent px-2 py-1 hover:bg-[var(--helm-list-hover)]"
           onClick={onRevise}
           type="button"
         >
-          Revise
+          {solo ? 'Edit task' : 'Revise'}
         </button>
         <button
           className="border-0 bg-transparent p-1 hover:underline"

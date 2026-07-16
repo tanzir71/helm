@@ -6,6 +6,7 @@ const settings = {
   provider: 'anthropic' as const,
   modelId: 'claude-sonnet-4-5',
   mode: 'agent' as const,
+  workflow: 'assist' as const,
   enterBehavior: 'queue' as const,
   autoContext: true,
   reasoningEffort: 'medium' as const,

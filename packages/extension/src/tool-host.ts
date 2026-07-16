@@ -369,10 +369,20 @@ export class ExtensionToolHost implements ToolHost, vscode.Disposable {
     await this.checkpoint(relativePath, uri, before);
     await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(uri, '..'));
     await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(after));
+    await this.revealWorkspaceFile(uri);
     this.post({
       type: 'suggestionAvailable',
       item: { kind: 'undo', label: `Undo ${relativePath}` },
     });
+  }
+
+  private async revealWorkspaceFile(uri: vscode.Uri): Promise<void> {
+    try {
+      const document = await vscode.workspace.openTextDocument(uri);
+      await vscode.window.showTextDocument(document, { preserveFocus: true, preview: true });
+    } catch {
+      // Editor navigation is observational and must never make an accepted edit fail.
+    }
   }
 
   private async showDiff(

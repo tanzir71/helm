@@ -28,6 +28,7 @@ export function activate(context: vscode.ExtensionContext): void {
         provider.testQueueSteerStop(),
       ),
       vscode.commands.registerCommand('helm.testPlanExecution', () => provider.testPlanExecution()),
+      vscode.commands.registerCommand('helm.testSoloWorkflow', () => provider.testSoloWorkflow()),
       vscode.commands.registerCommand('helm.testTwoFileEdit', () => provider.testTwoFileEdit()),
       vscode.commands.registerCommand('helm.testWebviewAudit', (mode: WebviewAuditMode) =>
         provider.testWebviewAudit(mode),

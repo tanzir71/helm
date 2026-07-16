@@ -81,6 +81,7 @@ export const DEFAULT_SETTINGS: SessionSettings = {
   provider: 'anthropic',
   modelId: 'claude-sonnet-4-5',
   mode: 'agent',
+  workflow: 'assist',
   enterBehavior: 'queue',
   autoContext: true,
   reasoningEffort: 'medium',

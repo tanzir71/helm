@@ -70,7 +70,9 @@ export function ComposerToolbar({
           models={models}
           onChange={onModelChange}
         />
-        <ModePill mode={settings.mode} onChange={onModeChange} />
+        {settings.workflow === 'assist' && (
+          <ModePill mode={settings.mode} onChange={onModeChange} />
+        )}
         <button
           aria-label={running ? 'Stop run' : 'Send message'}
           className={`flex size-6 shrink-0 items-center justify-center rounded-full border-0 p-0 ${running || canSend ? 'bg-[var(--helm-button-background)] text-[var(--helm-button-foreground)] hover:bg-[var(--helm-button-hover)]' : 'bg-[var(--helm-button-secondary-background)] text-[var(--helm-description-foreground)]'}`}

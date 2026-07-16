@@ -135,7 +135,11 @@ export function Composer({
             if (action) onSubmit(action);
           }
         }}
-        placeholder="Ask Helm anything — @ for context, / for commands"
+        placeholder={
+          settings.workflow === 'solo'
+            ? 'Describe an outcome — Helm will plan first'
+            : 'Ask Helm anything — @ for context, / for commands'
+        }
         ref={textareaRef}
         rows={1}
         value={input}

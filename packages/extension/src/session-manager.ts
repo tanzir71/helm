@@ -29,6 +29,7 @@ import {
   type WebviewAuditMode,
   type WebviewAuditResult,
   type WebviewToHostMessage,
+  type WorkflowMode,
 } from '@helm/core';
 import * as vscode from 'vscode';
 
@@ -56,6 +57,7 @@ interface StoredSession {
   provider: ProviderId;
   modelId: string;
   mode: ApprovalMode;
+  workflow?: WorkflowMode;
   baseURL?: string;
   goal?: string;
   autoContext?: boolean;
@@ -275,6 +277,62 @@ export class SessionManager implements vscode.Disposable {
     }
   }
 
+  async testSoloWorkflow(): Promise<{
+    planned: boolean;
+    goalBeforeApproval: string | undefined;
+    goalAfterApproval: string | undefined;
+    turns: string[];
+  }> {
+    this.assertTestMode();
+    const previousWorkflow = this.session.workflow;
+    const previousGoal = this.session.goal;
+    const previousPlan = this.session.plan;
+    const messageCount = this.session.messages.length;
+    this.session.workflow = 'solo';
+    delete this.session.goal;
+    delete this.session.plan;
+    this.testResolvedModel = createMockResolvedModel(
+      '1. Inspect the target\n2. Implement and verify the change',
+      '',
+    );
+    try {
+      await this.persist();
+      await this.handle({
+        type: 'userMessage',
+        id: crypto.randomUUID(),
+        text: 'Ship the requested feature',
+      });
+      const generatedPlan = this.settings().plan;
+      const planned =
+        generatedPlan?.origin === 'solo' &&
+        generatedPlan.goal === 'Ship the requested feature' &&
+        generatedPlan.executing === false &&
+        generatedPlan.steps.length === 2;
+      const goalBeforeApproval = this.session.goal;
+      this.testResolvedModel = createMockResolvedModel('Step complete', '');
+      await this.handle({ type: 'executePlan' });
+      return {
+        planned,
+        goalBeforeApproval,
+        goalAfterApproval: this.session.goal,
+        turns: this.session.messages
+          .slice(messageCount)
+          .filter((message) => message.role === 'user')
+          .map((message) => message.text),
+      };
+    } finally {
+      this.testResolvedModel = undefined;
+      if (previousWorkflow) this.session.workflow = previousWorkflow;
+      else delete this.session.workflow;
+      if (previousGoal) this.session.goal = previousGoal;
+      else delete this.session.goal;
+      if (previousPlan) this.session.plan = previousPlan;
+      else delete this.session.plan;
+      await this.persist();
+      await this.postSettings();
+    }
+  }
+
   async testTwoFileEdit(): Promise<{
     output: string;
     changed: boolean;
@@ -429,6 +487,9 @@ export class SessionManager implements vscode.Disposable {
         break;
       case 'setMode':
         await this.setMode(message.mode);
+        break;
+      case 'setWorkflow':
+        await this.setWorkflow(message.workflow);
         break;
       case 'confirmFullAccess':
         if (message.confirmed) {
@@ -674,6 +735,9 @@ export class SessionManager implements vscode.Disposable {
     await this.skillsReady;
     const command = parseSlashCommand(item.text);
     if (command && (await this.handleImmediateCommand(command.command, command.argument))) return;
+    const soloPlanRequest =
+      this.session.workflow === 'solo' && !command && item.planStepIndex === undefined;
+    const planning = soloPlanRequest || command?.command === 'plan';
     const key = await this.context.secrets.get(secretKey(this.session.provider));
     let resolvedModel;
     try {
@@ -727,23 +791,24 @@ export class SessionManager implements vscode.Disposable {
     let text = '';
     let reasoning = '';
     let succeeded = false;
+    let soloPlanCreated = false;
     try {
       const instructions = await loadAgentInstructions(
         this.workspaceRoot.fsPath,
         vscode.window.activeTextEditor?.document.uri.fsPath ?? this.workspaceRoot.fsPath,
       );
-      const prompt = this.commandPrompt(item.text, command?.command);
+      const prompt = this.commandPrompt(item.text, planning ? 'plan' : command?.command);
       const result = await this.runner.run({
         resolvedModel,
         prompt,
         history: this.historyBefore(userMessage.id),
-        mode: this.session.mode,
+        mode: planning ? 'chat' : this.effectiveMode(),
         host: this.toolHost,
         signal: this.controller.signal,
         steerQueue: this.queue,
         agentsInstructions: instructions.map((file) => file.content).join('\n\n'),
         skillsIndex: this.skills.promptIndex(),
-        ...(this.session.goal ? { goal: this.session.goal } : {}),
+        ...(this.session.goal && !soloPlanRequest ? { goal: this.session.goal } : {}),
         ...(item.planStepIndex !== undefined
           ? { planStep: this.session.plan?.steps[item.planStepIndex]?.text ?? item.text }
           : {}),
@@ -799,16 +864,23 @@ export class SessionManager implements vscode.Disposable {
           await this.generateSuggestions(resolvedModel, text, result.suggestions),
         ),
       });
-      if (command?.command === 'plan') {
+      if (planning) {
         const steps = extractPlan(text);
         if (steps.length > 0) {
           this.session.plan = {
             steps: steps.map((step) => ({ text: step, completed: false })),
             executing: false,
+            ...(soloPlanRequest ? { origin: 'solo', goal: soloGoal(item.text) } : {}),
           };
+          soloPlanCreated = soloPlanRequest;
           await this.persist();
           this.postPlan();
           await this.postSettings();
+        } else if (soloPlanRequest) {
+          this.post({
+            type: 'error',
+            message: 'Solo could not create a structured plan. Refine the task and try again.',
+          });
         }
       }
     } catch (error) {
@@ -844,7 +916,9 @@ export class SessionManager implements vscode.Disposable {
       this.updateStatus();
       this.postQueue();
     }
-    const next = (succeeded ? this.nextPlanInstruction() : undefined) ?? this.queue.completeRun();
+    const next = soloPlanCreated
+      ? undefined
+      : ((succeeded ? this.nextPlanInstruction() : undefined) ?? this.queue.completeRun());
     if (next && !this.disposed) {
       if (next.steered) this.post({ type: 'steered', id: next.id, text: next.text });
       this.postQueue();
@@ -869,6 +943,10 @@ export class SessionManager implements vscode.Disposable {
     }
     plan.executing = true;
     plan.currentStep = nextIndex;
+    if (plan.origin === 'solo' && plan.goal) {
+      this.session.goal = plan.goal;
+      this.post({ type: 'goalChanged', goal: plan.goal });
+    }
     await this.persist();
     this.postPlan();
     await this.postSettings();
@@ -951,7 +1029,7 @@ export class SessionManager implements vscode.Disposable {
     if (command === 'status') {
       const usage = this.session.usage ?? { tokens: 0, cost: 0 };
       await this.addLocalAssistant(
-        `**Provider:** ${this.session.provider}/${this.session.modelId}\n\n**Mode:** ${this.session.mode}\n\n**Usage:** ${usage.tokens.toLocaleString()} tokens · ≈$${usage.cost.toFixed(4)}\n\n**Queue:** ${this.queue.length}\n\n**Skills:** ${
+        `**Provider:** ${this.session.provider}/${this.session.modelId}\n\n**Workflow:** ${this.session.workflow === 'solo' ? 'Solo' : 'Assist'}\n\n**Safety:** ${this.effectiveMode()}\n\n**Usage:** ${usage.tokens.toLocaleString()} tokens · ≈$${usage.cost.toFixed(4)}\n\n**Queue:** ${this.queue.length}\n\n**Skills:** ${
           this.skills
             .listActive()
             .map((skill) => skill.name)
@@ -1021,6 +1099,20 @@ export class SessionManager implements vscode.Disposable {
       return;
     }
     this.session.mode = mode;
+    await this.persist();
+    await this.postSettings();
+    this.maybePostCodeGraphConsent();
+  }
+
+  private async setWorkflow(workflow: WorkflowMode): Promise<void> {
+    if (this.running) {
+      this.post({
+        type: 'error',
+        message: 'Finish or stop the current run before switching modes.',
+      });
+      return;
+    }
+    this.session.workflow = workflow;
     await this.persist();
     await this.postSettings();
     this.maybePostCodeGraphConsent();
@@ -1425,6 +1517,7 @@ export class SessionManager implements vscode.Disposable {
       provider: this.session.provider,
       modelId: this.session.modelId,
       mode: this.session.mode,
+      workflow: this.session.workflow ?? 'assist',
       enterBehavior,
       autoContext: this.session.autoContext !== false,
       reasoningEffort: this.session.reasoningEffort ?? 'medium',
@@ -1445,8 +1538,15 @@ export class SessionManager implements vscode.Disposable {
 
   private codeGraphEnabled(): boolean {
     return (
-      this.session.mode !== 'chat' && this.codeGraphFeatureEnabled() && this.codeGraph.hasIndex()
+      this.effectiveMode() !== 'chat' && this.codeGraphFeatureEnabled() && this.codeGraph.hasIndex()
     );
+  }
+
+  private effectiveMode(): ApprovalMode {
+    return this.session.workflow === 'solo' ||
+      (this.session.plan?.origin === 'solo' && this.session.plan.executing)
+      ? 'agent'
+      : this.session.mode;
   }
 
   private webProvider(): WebSearchProviderId {
@@ -1516,7 +1616,7 @@ export class SessionManager implements vscode.Disposable {
 
   private maybePostCodeGraphConsent(): void {
     if (
-      this.session.mode !== 'agent' ||
+      this.effectiveMode() !== 'agent' ||
       !this.codeGraphFeatureEnabled() ||
       this.codeGraph.hasIndex() ||
       this.context.workspaceState.get<boolean>(CODE_GRAPH_NOTICE_DISMISSED_KEY, false)
@@ -1594,7 +1694,8 @@ export class SessionManager implements vscode.Disposable {
       return;
     }
     const state = this.running ? '$(sync~spin)' : '$(compass)';
-    this.statusBar.text = `${state} ${this.session.modelId} · ${this.session.mode}`;
+    const workflow = this.session.workflow === 'solo' ? 'Solo' : this.session.mode;
+    this.statusBar.text = `${state} ${this.session.modelId} · ${workflow}`;
     this.statusBar.tooltip = `Helm · ${tokens.toLocaleString()} tokens · ≈$${cost.toFixed(4)}`;
   }
 
@@ -1631,6 +1732,17 @@ function extractPlan(text: string): string[] {
     .split(/\r?\n/u)
     .map((line) => /^\s*\d+[.)]\s+(.+)$/u.exec(line)?.[1])
     .filter((line): line is string => Boolean(line));
+}
+
+function soloGoal(text: string): string {
+  const visible = text
+    .replace(/@(file|folder):(?:"[^"]+"|[^\s]+)/gu, '')
+    .replace(/[ \t]+\n/gu, '\n')
+    .replace(/\n[ \t]+/gu, '\n')
+    .replace(/[ \t]{2,}/gu, ' ')
+    .replace(/\n{3,}/gu, '\n\n')
+    .trim();
+  return visible || text.trim();
 }
 
 function parseUtilityModel(

@@ -23,6 +23,7 @@ import { SettingsView } from './components/Settings/SettingsView';
 import { ToolCard } from './components/ToolCard';
 import { ToolGroupCard } from './components/ToolGroupCard';
 import { Transcript } from './components/Transcript';
+import { WorkflowTabs } from './components/WorkflowTabs';
 import { groupConsecutiveTools } from './components/tool-groups';
 import {
   selectCodeGraphStatus,
@@ -265,7 +266,10 @@ export function App(): React.JSX.Element {
   }
 
   return (
-    <main className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
+    <main
+      className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
+      id="helm-workspace-panel"
+    >
       <Header
         onNewSession={() => {
           if (state.messages.length === 0 || window.confirm('Start a new session?')) {
@@ -273,6 +277,11 @@ export function App(): React.JSX.Element {
           }
         }}
         onOpenSettings={() => dispatch({ type: 'settingsVisibilityChanged', open: true })}
+      />
+      <WorkflowTabs
+        disabled={running}
+        onChange={(workflow) => vscode.postMessage({ type: 'setWorkflow', workflow })}
+        workflow={state.settings.workflow}
       />
       {state.settings.goal && <GoalBanner goal={state.settings.goal} />}
       {state.codeGraphConsent && (
@@ -350,7 +359,15 @@ export function App(): React.JSX.Element {
           <PlanCard
             onDismiss={() => vscode.postMessage({ type: 'dismissPlan' })}
             onExecute={() => vscode.postMessage({ type: 'executePlan' })}
-            onRevise={() => dispatch({ type: 'inputChanged', value: '/plan Revise the plan: ' })}
+            onRevise={() =>
+              dispatch({
+                type: 'inputChanged',
+                value:
+                  state.plan?.origin === 'solo' && state.plan.goal
+                    ? state.plan.goal
+                    : '/plan Revise the plan: ',
+              })
+            }
             onToggle={(index) => vscode.postMessage({ type: 'togglePlanStep', index })}
             plan={state.plan}
             running={running}

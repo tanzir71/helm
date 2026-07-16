@@ -1,4 +1,5 @@
 export type ApprovalMode = 'chat' | 'agent' | 'fullAccess';
+export type WorkflowMode = 'assist' | 'solo';
 export type RunState = 'idle' | 'running' | 'stopping' | 'awaitingApproval';
 
 export interface ChatMessage {
@@ -15,12 +16,15 @@ export interface PlanState {
   steps: Array<{ text: string; completed: boolean }>;
   executing: boolean;
   currentStep?: number;
+  origin?: 'solo';
+  goal?: string;
 }
 
 export interface SessionSettings {
   provider: string;
   modelId: string;
   mode: ApprovalMode;
+  workflow: WorkflowMode;
   baseURL?: string;
   enterBehavior: 'queue' | 'steer';
   autoContext: boolean;
@@ -119,6 +123,7 @@ export type WebviewToHostMessage =
   | { type: 'rejectDiff'; diffId: string }
   | { type: 'openDiff'; diffId: string }
   | { type: 'setMode'; mode: ApprovalMode }
+  | { type: 'setWorkflow'; workflow: WorkflowMode }
   | { type: 'openSettings' }
   | { type: 'saveApiKey'; provider: string; key: string }
   | { type: 'removeApiKey'; provider: string }

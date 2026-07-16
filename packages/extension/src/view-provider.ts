@@ -46,6 +46,16 @@ export class HelmViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     return this.session.testPlanExecution();
   }
 
+  async testSoloWorkflow(): Promise<{
+    planned: boolean;
+    goalBeforeApproval: string | undefined;
+    goalAfterApproval: string | undefined;
+    turns: string[];
+  }> {
+    if (!this.session) throw new Error('Helm chat view is not ready.');
+    return this.session.testSoloWorkflow();
+  }
+
   async testWebviewAudit(mode: WebviewAuditMode): Promise<WebviewAuditResult> {
     if (!this.session) throw new Error('Helm chat view is not ready.');
     return await this.session.testWebviewAudit(mode);

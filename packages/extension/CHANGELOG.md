@@ -5,3 +5,5 @@
 - Initial Helm BYOK coding-agent release.
 - Nine provider routes, model profiles, streaming reasoning, tools, diffs, terminal approvals,
   checkpoints, queue/steer, slash commands, context, skills, suggestions, and reliability evals.
+- Assist/Solo workflow tabs with automatic planning, plan-to-goal approval, step execution, and
+  editor-follow navigation for accepted edits.

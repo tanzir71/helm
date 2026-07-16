@@ -11,6 +11,7 @@ terminal prompts.
 - Anthropic, OpenAI, Google, OpenRouter, and local Ollama models
 - Official Moonshot (Kimi), Z.ai (GLM), DeepSeek, and DashScope (Qwen) endpoints
 - Chat, Agent, and Full Access modes with a command denylist in every mode
+- Assist and Solo workflow tabs; Solo plans first, pauses for approval, then runs the plan as a goal
 - Markdown responses, highlighted code, collapsible reasoning, live tool cards, diffs, and Undo
 - Queued prompts, mid-run steering, Stop/Resume, persistent goals, and slash commands
 - `@file`, `@folder`, `@problems`, and `@terminal` context plus optional active-file context
@@ -60,6 +61,11 @@ normalizes that to the server's OpenAI-compatible `/v1` endpoint for chat reques
 
 While a run is active, Enter queues the next prompt by default and Tab steers the live run. Change
 that behavior with `helm.enterBehavior`. Stop preserves queued work and presents Resume/Clear.
+
+Use **Assist** for direct chat and agent work. Use **Solo** when you want to describe an outcome and
+let Helm generate the plan automatically. Solo waits for **Approve & run**, pins the original task
+as the session goal, executes each plan step, and reveals accepted workspace files in the editor as
+it changes them. Solo uses Agent safety, so diffs and commands remain reviewable.
 
 Context mentions are selected with a fuzzy popup:
 

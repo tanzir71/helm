@@ -56,6 +56,23 @@ describe('Helm extension', () => {
     ]);
   });
 
+  it('plans a Solo task, waits for approval, then runs it as the persistent goal', async () => {
+    const result = await vscode.commands.executeCommand<{
+      planned: boolean;
+      goalBeforeApproval: string | undefined;
+      goalAfterApproval: string | undefined;
+      turns: string[];
+    }>('helm.testSoloWorkflow');
+    assert.equal(result.planned, true);
+    assert.equal(result.goalBeforeApproval, undefined);
+    assert.equal(result.goalAfterApproval, 'Ship the requested feature');
+    assert.deepEqual(result.turns, [
+      'Ship the requested feature',
+      'Execute approved plan step 1/2: Inspect the target',
+      'Execute approved plan step 2/2: Implement and verify the change',
+    ]);
+  });
+
   it('accepts two native diffs, verifies the program, and restores the turn checkpoint', async () => {
     const result = await vscode.commands.executeCommand<{
       output: string;
