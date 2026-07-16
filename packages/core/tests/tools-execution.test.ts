@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { SkillLoader } from '../src/skill-loader.js';
 import { allowedToolNames, createAgentTools, type ToolHost } from '../src/tools.js';
 
 const options = {
@@ -46,5 +47,25 @@ describe('agent tools', () => {
       'unavailable',
     );
     expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('loads both bundled workspace skills through the agent use_skill tool', async () => {
+    const loader = new SkillLoader();
+    const root = new URL('../../../.helm/skills/', import.meta.url);
+    const discovered = await loader.discover([root.pathname]);
+    expect(discovered.map((skill) => skill.name).sort()).toEqual(['commit-message', 'write-tests']);
+    const tools = createAgentTools(
+      {
+        execute: async () => 'unused',
+        loadSkill: async (name) => (await loader.load(name)).body,
+      },
+      'chat',
+    );
+    await expect(tools.use_skill.execute!({ name: 'write-tests' }, options)).resolves.toContain(
+      '`run_command`',
+    );
+    await expect(tools.use_skill.execute!({ name: 'commit-message' }, options)).resolves.toContain(
+      'imperative mood',
+    );
   });
 });

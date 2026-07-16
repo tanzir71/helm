@@ -26,6 +26,7 @@ export interface AgentRunCallbacks extends ToolEventCallbacks {
   onReasoningReplaced?(text: string): void;
   onSteered?(item: { id: string; text: string }): void;
   onUsage?(usage: AgentUsage): void;
+  onToolRepair?(): void;
 }
 
 export interface AgentUsage {
@@ -105,6 +106,7 @@ export class AgentRunner {
             experimental_repairToolCall: async ({ toolCall }) => {
               const repaired = repairJson(toolCall.input);
               if (repaired.value === undefined) return null;
+              if (repaired.repaired) callbacks.onToolRepair?.();
               return { ...toolCall, input: JSON.stringify(repaired.value) };
             },
           }
@@ -121,6 +123,9 @@ export class AgentRunner {
       onError: () => {},
       ...(options.signal ? { abortSignal: options.signal } : {}),
       prepareStep: ({ messages: stepMessages, stepNumber }) => {
+        const preparedMessages = options.resolvedModel.profile.reasoning.preserveBetweenToolCalls
+          ? stepMessages
+          : stripReasoningFromStepMessages(stepMessages);
         const additions: ModelMessage[] = [];
         const steer = options.steerQueue?.consumeSteer();
         if (steer) {
@@ -135,7 +140,9 @@ export class AgentRunner {
           additions.push({ role: 'system', content: loopReminder });
           loopReminder = undefined;
         }
-        return additions.length > 0 ? { messages: [...stepMessages, ...additions] } : {};
+        return additions.length > 0 || preparedMessages !== stepMessages
+          ? { messages: [...preparedMessages, ...additions] }
+          : {};
       },
     });
     let text = '';
@@ -187,6 +194,18 @@ export class AgentRunner {
       suggestions: fallbackSuggestions({ text }),
     };
   }
+}
+
+function stripReasoningFromStepMessages(messages: ModelMessage[]): ModelMessage[] {
+  let changed = false;
+  const sanitized = messages.map((message): ModelMessage => {
+    if (message.role !== 'assistant' || !Array.isArray(message.content)) return message;
+    const content = message.content.filter((part) => part.type !== 'reasoning');
+    if (content.length === message.content.length) return message;
+    changed = true;
+    return { ...message, content };
+  });
+  return changed ? sanitized : messages;
 }
 
 function advisedToolNames(mode: ApprovalMode, limit: number) {

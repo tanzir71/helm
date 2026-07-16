@@ -10,6 +10,12 @@ export interface ChatMessage {
   interrupted?: boolean;
 }
 
+export interface PlanState {
+  steps: Array<{ text: string; completed: boolean }>;
+  executing: boolean;
+  currentStep?: number;
+}
+
 export interface SessionSettings {
   provider: string;
   modelId: string;
@@ -19,6 +25,7 @@ export interface SessionSettings {
   autoContext: boolean;
   reasoningEffort: 'low' | 'medium' | 'high';
   goal?: string;
+  plan?: PlanState;
 }
 
 export type WebviewToHostMessage =
@@ -58,6 +65,9 @@ export type WebviewToHostMessage =
   | { type: 'clearQueue' }
   | { type: 'undoLastChange' }
   | { type: 'restoreCheckpoint' }
+  | { type: 'executePlan' }
+  | { type: 'togglePlanStep'; index: number }
+  | { type: 'dismissPlan' }
   | { type: 'confirmFullAccess'; confirmed: boolean }
   | { type: 'clearSession' };
 
@@ -85,7 +95,7 @@ export type HostToWebviewMessage =
   | { type: 'modelsUpdated'; provider: string; models: Array<{ id: string; label: string }> }
   | { type: 'contextItems'; kind: 'file' | 'folder'; items: string[] }
   | { type: 'goalChanged'; goal?: string }
-  | { type: 'planProposed'; steps: string[] }
+  | { type: 'planChanged'; plan?: PlanState }
   | { type: 'fullAccessConfirmationRequired' }
   | { type: 'undoAvailable'; label: string }
   | { type: 'checkpointAvailable'; label: string }

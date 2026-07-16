@@ -19,6 +19,33 @@ export class HelmViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     return this.session.lastAssistantText();
   }
 
+  async testSteerAtToolBoundary(): Promise<string | undefined> {
+    if (!this.session) throw new Error('Helm chat view is not ready.');
+    return this.session.testSteerAtToolBoundary();
+  }
+
+  async testQueueSteerStop(): Promise<{
+    preservedQueue: string[];
+    resumedText?: string;
+  }> {
+    if (!this.session) throw new Error('Helm chat view is not ready.');
+    return this.session.testQueueSteerStop();
+  }
+
+  async testTwoFileEdit(): Promise<{ output: string; changed: boolean; restored: boolean }> {
+    if (!this.session) throw new Error('Helm chat view is not ready.');
+    return this.session.testTwoFileEdit();
+  }
+
+  async testPlanExecution(): Promise<{
+    completed: boolean[];
+    persisted: boolean[];
+    turns: string[];
+  }> {
+    if (!this.session) throw new Error('Helm chat view is not ready.');
+    return this.session.testPlanExecution();
+  }
+
   resolveWebviewView(view: vscode.WebviewView): void {
     view.webview.options = {
       enableScripts: true,

@@ -20,6 +20,14 @@ export function activate(context: vscode.ExtensionContext): void {
         await new Promise((resolve) => setTimeout(resolve, 500));
         return provider.testMockTurn(text);
       }),
+      vscode.commands.registerCommand('helm.testSteerAtToolBoundary', () =>
+        provider.testSteerAtToolBoundary(),
+      ),
+      vscode.commands.registerCommand('helm.testQueueSteerStop', () =>
+        provider.testQueueSteerStop(),
+      ),
+      vscode.commands.registerCommand('helm.testPlanExecution', () => provider.testPlanExecution()),
+      vscode.commands.registerCommand('helm.testTwoFileEdit', () => provider.testTwoFileEdit()),
     );
   }
 }

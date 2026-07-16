@@ -1,6 +1,8 @@
 export interface QueuedInstruction {
   id: string;
   text: string;
+  steered?: boolean;
+  planStepIndex?: number;
 }
 
 export class SteerQueue {
@@ -14,7 +16,7 @@ export class SteerQueue {
 
   steer(item: QueuedInstruction): void {
     this.remove(item.id);
-    this.pendingSteer = item;
+    this.pendingSteer = { ...item, steered: true };
   }
 
   consumeSteer(): QueuedInstruction | undefined {
@@ -25,6 +27,8 @@ export class SteerQueue {
 
   completeRun(): QueuedInstruction | undefined {
     if (this.stopped) return undefined;
+    const steer = this.consumeSteer();
+    if (steer) return steer;
     return this.queued.shift();
   }
 

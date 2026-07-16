@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { AgentRunner } from '../src/agent-runner.js';
 import { resolveModelProfile } from '../src/model-profiles.js';
+import type { ToolHost } from '../src/tools.js';
 
 function mockModel(chunks: Parameters<typeof simulateReadableStream>[0]['chunks']): LanguageModel {
   return {
@@ -103,4 +104,165 @@ describe('AgentRunner', () => {
     expect(result.reasoning).toBe('Continue carefully.');
     expect(onReasoningReplaced).toHaveBeenCalledWith('Continue carefully.');
   });
+
+  it('returns zod validation feedback to the model as a tool result', async () => {
+    let step = 0;
+    let secondPrompt = '';
+    const model: LanguageModel = {
+      specificationVersion: 'v2',
+      provider: 'mock',
+      modelId: 'validation-feedback',
+      supportedUrls: {},
+      doGenerate: async () => ({
+        content: [{ type: 'text', text: 'unused' }],
+        finishReason: 'stop',
+        usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+        warnings: [],
+      }),
+      doStream: async (options) => {
+        step += 1;
+        if (step === 1) {
+          return {
+            stream: simulateReadableStream({
+              chunks: [
+                { type: 'stream-start' as const, warnings: [] },
+                {
+                  type: 'tool-call' as const,
+                  toolCallId: 'invalid-read',
+                  toolName: 'read_file',
+                  input: '{}',
+                },
+                {
+                  type: 'finish' as const,
+                  finishReason: 'tool-calls' as const,
+                  usage: { inputTokens: 2, outputTokens: 1, totalTokens: 3 },
+                },
+              ],
+            }),
+          };
+        }
+        secondPrompt = JSON.stringify(options.prompt);
+        return {
+          stream: simulateReadableStream({
+            chunks: [
+              { type: 'stream-start' as const, warnings: [] },
+              { type: 'text-start' as const, id: 'corrected' },
+              { type: 'text-delta' as const, id: 'corrected', delta: 'self-corrected' },
+              { type: 'text-end' as const, id: 'corrected' },
+              {
+                type: 'finish' as const,
+                finishReason: 'stop' as const,
+                usage: { inputTokens: 3, outputTokens: 2, totalTokens: 5 },
+              },
+            ],
+          }),
+        };
+      },
+    };
+    const host: ToolHost = {
+      execute: vi.fn(async () => 'should not execute'),
+    };
+    const result = await new AgentRunner().run({
+      resolvedModel: {
+        provider: 'ollama',
+        modelId: 'validation-feedback',
+        model,
+        profile: resolveModelProfile('generic'),
+      },
+      prompt: 'Read a file',
+      host,
+    });
+    expect(result.text).toBe('self-corrected');
+    expect(secondPrompt).toContain('Invalid tool arguments');
+    expect(host.execute).not.toHaveBeenCalled();
+  });
+
+  it('preserves Kimi reasoning but strips DeepSeek reasoning between tool steps', async () => {
+    const kimiPrompts: string[] = [];
+    const deepSeekPrompts: string[] = [];
+    const host: ToolHost = { execute: vi.fn(async () => 'file contents') };
+    await new AgentRunner().run({
+      resolvedModel: {
+        provider: 'ollama',
+        modelId: 'kimi-k2.6',
+        model: reasoningToolModel(kimiPrompts),
+        profile: resolveModelProfile('kimi-k2.6'),
+      },
+      prompt: 'Inspect',
+      host,
+    });
+    await new AgentRunner().run({
+      resolvedModel: {
+        provider: 'ollama',
+        modelId: 'deepseek-v4-pro',
+        model: reasoningToolModel(deepSeekPrompts),
+        profile: resolveModelProfile('deepseek-v4-pro'),
+      },
+      prompt: 'Inspect',
+      host,
+    });
+    expect(kimiPrompts[1]).toContain('private chain');
+    expect(deepSeekPrompts[1]).not.toContain('private chain');
+  });
 });
+
+function reasoningToolModel(prompts: string[]): LanguageModel {
+  let step = 0;
+  return {
+    specificationVersion: 'v2',
+    provider: 'mock',
+    modelId: 'reasoning-tool-model',
+    supportedUrls: {},
+    doGenerate: async () => ({
+      content: [{ type: 'text', text: 'unused' }],
+      finishReason: 'stop',
+      usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+      warnings: [],
+    }),
+    doStream: async (options) => {
+      prompts.push(JSON.stringify(options.prompt));
+      step += 1;
+      return step === 1
+        ? {
+            stream: simulateReadableStream({
+              chunks: [
+                { type: 'stream-start' as const, warnings: [] },
+                { type: 'reasoning-start' as const, id: 'reasoning' },
+                {
+                  type: 'reasoning-delta' as const,
+                  id: 'reasoning',
+                  delta: 'private chain',
+                },
+                { type: 'reasoning-end' as const, id: 'reasoning' },
+                {
+                  type: 'tool-call' as const,
+                  toolCallId: 'read',
+                  toolName: 'read_file',
+                  input: '{"path":"package.json"}',
+                },
+                {
+                  type: 'finish' as const,
+                  finishReason: 'tool-calls' as const,
+                  usage: { inputTokens: 2, outputTokens: 2, totalTokens: 4 },
+                },
+              ],
+            }),
+          }
+        : {
+            stream: simulateReadableStream({
+              chunks: [
+                { type: 'stream-start' as const, warnings: [] },
+                { type: 'text-start' as const, id: 'answer' },
+                { type: 'text-delta' as const, id: 'answer', delta: 'done' },
+                { type: 'text-end' as const, id: 'answer' },
+                {
+                  type: 'finish' as const,
+                  finishReason: 'stop' as const,
+                  usage: { inputTokens: 3, outputTokens: 1, totalTokens: 4 },
+                },
+              ],
+            }),
+          };
+    },
+  };
+}

@@ -5,6 +5,7 @@ import {
   type ApprovalMode,
   type ChatMessage,
   type HostToWebviewMessage,
+  type PlanState,
   type SessionSettings,
 } from '@helm/core/browser';
 import {
@@ -84,7 +85,7 @@ export function App(): React.JSX.Element {
   const [notice, setNotice] = useState<string>();
   const [input, setInput] = useState('');
   const [tokenLabel, setTokenLabel] = useState('0 tokens');
-  const [plan, setPlan] = useState<string[]>([]);
+  const [plan, setPlan] = useState<PlanState>();
   const [contextItems, setContextItems] = useState<string[]>([]);
   const draggedId = useRef<string>();
   const running = runState !== 'idle';
@@ -99,6 +100,7 @@ export function App(): React.JSX.Element {
         case 'sessionRestored':
           setMessages(message.messages);
           setSettings(message.settings);
+          setPlan(message.settings.plan);
           break;
         case 'messageAdded':
         case 'assistantStarted':
@@ -180,6 +182,7 @@ export function App(): React.JSX.Element {
           break;
         case 'settingsChanged':
           setSettings(message.settings);
+          setPlan(message.settings.plan);
           setHasApiKey(message.hasApiKey);
           break;
         case 'modelsUpdated':
@@ -222,8 +225,8 @@ export function App(): React.JSX.Element {
             ...(message.goal ? { goal: message.goal } : {}),
           }));
           break;
-        case 'planProposed':
-          setPlan(message.steps);
+        case 'planChanged':
+          setPlan(message.plan);
           break;
         case 'fullAccessConfirmationRequired':
           vscode.postMessage({
@@ -415,17 +418,14 @@ export function App(): React.JSX.Element {
             />
           ))}
 
-          {plan.length > 0 && (
+          {plan && plan.steps.length > 0 && (
             <PlanCard
-              steps={plan}
-              execute={() => {
-                send(
-                  'userMessage',
-                  `Execute this approved plan:\n${plan.map((step, index) => `${index + 1}. ${step}`).join('\n')}`,
-                );
-              }}
+              plan={plan}
+              running={running}
+              execute={() => vscode.postMessage({ type: 'executePlan' })}
+              toggle={(index) => vscode.postMessage({ type: 'togglePlanStep', index })}
               revise={() => setInput('/plan Revise the plan: ')}
-              dismiss={() => setPlan([])}
+              dismiss={() => vscode.postMessage({ type: 'dismissPlan' })}
             />
           )}
         </ConversationContent>
@@ -718,58 +718,50 @@ function DiffCard({
 }
 
 function PlanCard({
-  steps,
+  plan,
+  running,
   execute,
+  toggle,
   revise,
   dismiss,
 }: {
-  steps: string[];
+  plan: PlanState;
+  running: boolean;
   execute: () => void;
+  toggle: (index: number) => void;
   revise: () => void;
   dismiss: () => void;
 }): React.JSX.Element {
-  const [checked, setChecked] = useState<Set<number>>(new Set());
-  const [executing, setExecuting] = useState(false);
-  useEffect(() => {
-    setChecked(new Set());
-    setExecuting(false);
-  }, [steps]);
   return (
     <section className="plan-card">
       <div className="card-title">
         <Sparkles size={15} /> Plan ready
       </div>
       <ol>
-        {steps.map((step, index) => (
-          <li key={step} className={checked.has(index) ? 'complete' : undefined}>
+        {plan.steps.map((step, index) => (
+          <li key={`${index}-${step.text}`} className={step.completed ? 'complete' : undefined}>
             <label>
               <input
                 type="checkbox"
-                checked={checked.has(index)}
-                onChange={() =>
-                  setChecked((current) => {
-                    const next = new Set(current);
-                    if (next.has(index)) next.delete(index);
-                    else next.add(index);
-                    return next;
-                  })
-                }
+                checked={step.completed}
+                disabled={running}
+                onChange={() => toggle(index)}
               />
-              {step}
+              {step.text}
             </label>
           </li>
         ))}
       </ol>
       <div className="approval-actions">
-        <button
-          className="primary compact"
-          disabled={executing}
-          onClick={() => {
-            setExecuting(true);
-            execute();
-          }}
-        >
-          <Play size={13} /> {executing ? 'Executing…' : 'Execute plan'}
+        <button className="primary compact" disabled={running} onClick={execute}>
+          <Play size={13} />{' '}
+          {running && plan.executing
+            ? 'Executing…'
+            : plan.executing
+              ? 'Resume plan'
+              : plan.steps.every((step) => step.completed)
+                ? 'Run again'
+                : 'Execute plan'}
         </button>
         <button onClick={revise}>
           <RotateCcw size={13} /> Revise

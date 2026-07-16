@@ -35,6 +35,17 @@ Use any real provider key and keep Agent mode selected.
 5. Run the open-model eval with an available key and record its success/repair rates in
    `PROGRESS.md`.
 
+For example, DeepSeek live evaluation uses ten isolated tool-call tasks and does not touch files or
+run commands because the evaluator supplies a stub host:
+
+```bash
+HELM_API_KEY=<key> pnpm eval --model deepseek-v4-flash --live
+```
+
+Use `--provider <id>` or `HELM_PROVIDER` for model names whose provider cannot be inferred, and
+`HELM_BASE_URL` for a custom or local compatible endpoint. Without `--live`, the same command
+replays the checked-in family fixture used in CI.
+
 ## Release policy
 
 - Never add API keys, generated provider transcripts, or workspace checkpoints to the package.

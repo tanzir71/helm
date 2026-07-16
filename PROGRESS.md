@@ -2,14 +2,15 @@
 
 ## Current
 
-Release candidate audit — automated implementation is complete; external provider QA remains.
+Release candidate audit — all automated implementation and release gates pass; credential-backed
+manual QA remains.
 
-1. Run `pnpm verify` after the final audit edits.
-2. Re-run the Electron mock-provider integration suite.
-3. Rebuild and integrity-check `dist/helm-0.1.0.vsix`.
-4. With a user-supplied key (or running Ollama), perform the real-provider, two-file diff, and
-   queue/steer/stop spot checks from `RELEASE.md`.
-5. Run one live open-weight eval and record its success rate below.
+1. Supply any supported provider key (or start Ollama) and run the manual smoke test in
+   `RELEASE.md`.
+2. Verify real-provider streaming, Stop, two manually accepted diffs, Undo, and the visible
+   queue→steer→stop flow.
+3. Run `HELM_API_KEY=<key> pnpm eval --model <id> --live` against one open-weight model and record
+   its success and repair rates below.
 
 ## Milestones
 
@@ -95,7 +96,8 @@ Release candidate audit — automated implementation is complete; external provi
 - Required manual release checks need a real provider key or a running Ollama server. No recognized
   provider key is present in this environment, and `localhost:11434` is not running. Pending:
   real-provider streaming, manual two-file diff acceptance, queue→steer→stop UI flow, and one live
-  open-weight eval. Automated mock-provider and recorded-family equivalents pass.
+  open-weight eval. The live evaluator is implemented; automated mock-provider and recorded-family
+  equivalents pass.
 
 ## Decisions
 
@@ -133,3 +135,19 @@ Release candidate audit — automated implementation is complete; external provi
   errors, and VS Code high-contrast styling implemented.
 - [2026-07-16] M8 automated gates passed — Electron mock turn 1/1, clean VSIX install listed
   `helm-local.helm@0.1.0`, core 33/33 tests at 80.88% lines, and the full suite passed.
+- [2026-07-16] Release audit hardened the live agent path — invalid Zod arguments now reach the
+  model as repairable tool results, Kimi/DeepSeek reasoning history follows profile policy, and an
+  unconsumed steer becomes the immediate follow-up instead of leaking into a later turn.
+- [2026-07-16] M5 plan flow re-verified — approved plans persist as structured checklists, execute
+  one re-anchored step per turn, and automatically record completion; Electron persistence test
+  passes.
+- [2026-07-16] M4/M5 automated E2E expanded — Electron 5/5 covers stream, tool-boundary steer,
+  queue→steer→stop→resume, durable plan execution, two accepted native diffs, passing `hello()`,
+  and grouped checkpoint restore.
+- [2026-07-16] M6 eval audit passed — all four recorded families score 100% across 10 tasks each;
+  repair rates: Kimi 50%, GLM 50%, DeepSeek 40%, Qwen 50%; zero loop incidents. `--live` now runs
+  the same ten tasks through `ProviderRegistry` and a no-side-effect tool host when credentials are
+  supplied.
+- [2026-07-16] M8 release gates re-verified — `pnpm verify` green with core 37/37 at 78.26% lines,
+  headless run green, Electron 5/5, VSIX archive clean, isolated install lists
+  `helm-local.helm@0.1.0`; SHA-256 `49b59060f2a2434fa4a655e7284898e5abda02804f72ec974d35c5caa2a1c3b4`.

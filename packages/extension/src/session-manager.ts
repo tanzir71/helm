@@ -5,6 +5,7 @@ import {
   AgentRunner,
   ContextManager,
   createMockResolvedModel,
+  createToolLoopMockResolvedModel,
   loadAgentInstructions,
   parseSlashCommand,
   ProviderRegistry,
@@ -15,7 +16,9 @@ import {
   type ApprovalMode,
   type ChatMessage,
   type HostToWebviewMessage,
+  type PlanState,
   type ProviderId,
+  type QueuedInstruction,
   type ResolvedModel,
   type SessionSettings,
   type WebviewToHostMessage,
@@ -34,6 +37,7 @@ interface StoredSession {
   autoContext?: boolean;
   reasoningEffort?: 'low' | 'medium' | 'high';
   usage?: { tokens: number; cost: number };
+  plan?: PlanState;
 }
 
 const SESSION_KEY = 'helm.session.v1';
@@ -50,6 +54,7 @@ export class SessionManager implements vscode.Disposable {
   private controller: AbortController | undefined;
   private running = false;
   private disposed = false;
+  private testResolvedModel: ResolvedModel | undefined;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -88,6 +93,158 @@ export class SessionManager implements vscode.Disposable {
       if (message?.role === 'assistant') return message.text;
     }
     return undefined;
+  }
+
+  async testSteerAtToolBoundary(): Promise<string | undefined> {
+    this.assertTestMode();
+    this.testResolvedModel = createToolLoopMockResolvedModel();
+    try {
+      const run = this.handle({
+        type: 'userMessage',
+        id: crypto.randomUUID(),
+        text: 'inspect the package before answering',
+      });
+      await waitUntil(() => this.running);
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      await this.handle({
+        type: 'steerMessage',
+        id: crypto.randomUUID(),
+        text: 'focus on the package name',
+      });
+      await run;
+      return this.lastAssistantText();
+    } finally {
+      this.testResolvedModel = undefined;
+    }
+  }
+
+  async testQueueSteerStop(): Promise<{
+    preservedQueue: string[];
+    resumedText?: string;
+  }> {
+    this.assertTestMode();
+    this.testResolvedModel = createMockResolvedModel('slow mock response', '', {
+      initialDelayInMs: 500,
+    });
+    const firstRun = this.handle({
+      type: 'userMessage',
+      id: crypto.randomUUID(),
+      text: 'start a slow task',
+    });
+    await waitUntil(() => this.running);
+    await this.handle({ type: 'queueMessage', id: 'queued-integration', text: 'queued follow-up' });
+    await this.handle({ type: 'steerMessage', id: 'steer-integration', text: 'urgent steer' });
+    await this.handle({ type: 'stopRun' });
+    await firstRun;
+    const preservedQueue = this.queue.snapshot().map((item) => item.text);
+    this.testResolvedModel = undefined;
+    await this.handle({ type: 'resumeQueue' });
+    const resumedText = this.lastAssistantText();
+    return { preservedQueue, ...(resumedText ? { resumedText } : {}) };
+  }
+
+  async testPlanExecution(): Promise<{
+    completed: boolean[];
+    persisted: boolean[];
+    turns: string[];
+  }> {
+    this.assertTestMode();
+    this.session.plan = {
+      steps: [
+        { text: 'Inspect the target', completed: false },
+        { text: 'Report the result', completed: false },
+      ],
+      executing: false,
+    };
+    await this.persist();
+    const messageCount = this.session.messages.length;
+    try {
+      await this.handle({ type: 'executePlan' });
+      const completed = this.session.plan?.steps.map((step) => step.completed) ?? [];
+      const persisted =
+        this.context.workspaceState
+          .get<StoredSession>(SESSION_KEY)
+          ?.plan?.steps.map((step) => step.completed) ?? [];
+      const turns = this.session.messages
+        .slice(messageCount)
+        .filter((message) => message.role === 'user')
+        .map((message) => message.text);
+      return { completed, persisted, turns };
+    } finally {
+      delete this.session.plan;
+      await this.persist();
+      this.postPlan();
+    }
+  }
+
+  async testTwoFileEdit(): Promise<{
+    output: string;
+    changed: boolean;
+    restored: boolean;
+  }> {
+    this.assertTestMode();
+    const folderName = `.helm-integration-${crypto.randomUUID()}`;
+    const folder = vscode.Uri.joinPath(this.workspaceRoot, folderName);
+    const utils = vscode.Uri.joinPath(folder, 'utils.ts');
+    const index = vscode.Uri.joinPath(folder, 'index.ts');
+    const originalUtils = 'export const existing = true;\n';
+    const originalIndex = "import { existing } from './utils.ts';\nconsole.log(existing);\n";
+    await vscode.workspace.fs.createDirectory(folder);
+    await vscode.workspace.fs.writeFile(utils, new TextEncoder().encode(originalUtils));
+    await vscode.workspace.fs.writeFile(index, new TextEncoder().encode(originalIndex));
+    this.toolHost.beginTurn(`integration-${crypto.randomUUID()}`);
+    try {
+      const utilsEdit = this.toolHost.execute(
+        'edit_file',
+        {
+          path: `${folderName}/utils.ts`,
+          old_text: originalUtils,
+          new_text:
+            "export const existing = true;\nexport function hello(): string { return 'hello'; }\n",
+        },
+        { mode: 'agent', callId: 'integration-utils' },
+      );
+      await this.toolHost.acceptNextPendingDiffForTest();
+      await utilsEdit;
+      await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+
+      const indexEdit = this.toolHost.execute(
+        'edit_file',
+        {
+          path: `${folderName}/index.ts`,
+          old_text: originalIndex,
+          new_text: "import { hello } from './utils.ts';\nconsole.log(hello());\n",
+        },
+        { mode: 'agent', callId: 'integration-index' },
+      );
+      await this.toolHost.acceptNextPendingDiffForTest();
+      await indexEdit;
+      await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+
+      const output = String(
+        await this.toolHost.execute(
+          'run_command',
+          { command: `pnpm exec tsx ${folderName}/index.ts` },
+          { mode: 'fullAccess', callId: 'integration-run' },
+        ),
+      );
+      const changed =
+        new TextDecoder().decode(await vscode.workspace.fs.readFile(utils)).includes('hello()') &&
+        new TextDecoder().decode(await vscode.workspace.fs.readFile(index)).includes('hello()');
+      await this.toolHost.restoreLastTurn();
+      const restored =
+        new TextDecoder().decode(await vscode.workspace.fs.readFile(utils)) === originalUtils &&
+        new TextDecoder().decode(await vscode.workspace.fs.readFile(index)) === originalIndex;
+      return { output, changed, restored };
+    } finally {
+      await vscode.workspace.fs.delete(folder, { recursive: true, useTrash: false });
+    }
+  }
+
+  private assertTestMode(): void {
+    if (process.env.HELM_MOCK_PROVIDER !== '1') {
+      throw new Error('Helm integration helpers are available only with the mock provider.');
+    }
   }
 
   async handle(message: WebviewToHostMessage): Promise<void> {
@@ -157,6 +314,18 @@ export class SessionManager implements vscode.Disposable {
             : { type: 'error', message: 'There is no Helm turn checkpoint to restore.' },
         );
         break;
+      case 'executePlan':
+        await this.executePlan();
+        break;
+      case 'togglePlanStep':
+        await this.togglePlanStep(message.index);
+        break;
+      case 'dismissPlan':
+        delete this.session.plan;
+        await this.persist();
+        this.postPlan();
+        this.postSettings();
+        break;
       case 'setMode':
         await this.setMode(message.mode);
         break;
@@ -203,6 +372,7 @@ export class SessionManager implements vscode.Disposable {
       case 'clearSession':
         this.session.messages = [];
         delete this.session.goal;
+        delete this.session.plan;
         await this.persist();
         await this.restore();
         break;
@@ -223,7 +393,7 @@ export class SessionManager implements vscode.Disposable {
     this.postSettings();
   }
 
-  private async submit(item: { id: string; text: string }): Promise<void> {
+  private async submit(item: QueuedInstruction): Promise<void> {
     if (this.running) {
       if (this.settings().enterBehavior === 'steer') this.queue.steer(item);
       else this.queue.enqueue(item);
@@ -233,21 +403,22 @@ export class SessionManager implements vscode.Disposable {
     await this.startTurn(item);
   }
 
-  private async startTurn(item: { id: string; text: string }): Promise<void> {
+  private async startTurn(item: QueuedInstruction): Promise<void> {
     const command = parseSlashCommand(item.text);
     if (command && (await this.handleImmediateCommand(command.command, command.argument))) return;
     const key = await this.context.secrets.get(secretKey(this.session.provider));
     let resolvedModel;
     try {
       resolvedModel =
-        process.env.HELM_MOCK_PROVIDER === '1'
+        this.testResolvedModel ??
+        (process.env.HELM_MOCK_PROVIDER === '1'
           ? createMockResolvedModel(`Mock received: ${item.text}`)
           : this.registry.resolve({
               provider: this.session.provider,
               modelId: this.session.modelId,
               ...(key ? { apiKey: key } : {}),
               ...(this.session.baseURL ? { baseURL: this.session.baseURL } : {}),
-            });
+            }));
     } catch (error) {
       this.post({
         type: 'error',
@@ -281,6 +452,7 @@ export class SessionManager implements vscode.Disposable {
 
     let text = '';
     let reasoning = '';
+    let succeeded = false;
     try {
       const instructions = await loadAgentInstructions(
         this.workspaceRoot.fsPath,
@@ -298,6 +470,9 @@ export class SessionManager implements vscode.Disposable {
         agentsInstructions: instructions.map((file) => file.content).join('\n\n'),
         skillsIndex: this.skills.promptIndex(),
         ...(this.session.goal ? { goal: this.session.goal } : {}),
+        ...(item.planStepIndex !== undefined
+          ? { planStep: this.session.plan?.steps[item.planStepIndex]?.text ?? item.text }
+          : {}),
         context: await this.workspaceContext(item.text),
         reasoningEffort: this.session.reasoningEffort ?? 'medium',
         callbacks: {
@@ -338,14 +513,26 @@ export class SessionManager implements vscode.Disposable {
       assistant.text = text;
       if (reasoning) assistant.reasoning = reasoning;
       this.session.messages.push(assistant);
+      if (item.planStepIndex !== undefined) this.completePlanStep(item.planStepIndex);
       await this.persist();
+      succeeded = true;
       this.post({ type: 'assistantCompleted', id: assistant.id });
       this.post({
         type: 'suggestions',
         items: await this.generateSuggestions(resolvedModel, text, result.suggestions),
       });
-      if (command?.command === 'plan')
-        this.post({ type: 'planProposed', steps: extractPlan(text) });
+      if (command?.command === 'plan') {
+        const steps = extractPlan(text);
+        if (steps.length > 0) {
+          this.session.plan = {
+            steps: steps.map((step) => ({ text: step, completed: false })),
+            executing: false,
+          };
+          await this.persist();
+          this.postPlan();
+          await this.postSettings();
+        }
+      }
     } catch (error) {
       const stopped = this.controller.signal.aborted;
       assistant.text = text;
@@ -376,11 +563,80 @@ export class SessionManager implements vscode.Disposable {
       this.updateStatus();
       this.postQueue();
     }
-    const next = this.queue.completeRun();
+    const next = (succeeded ? this.nextPlanInstruction() : undefined) ?? this.queue.completeRun();
     if (next && !this.disposed) {
+      if (next.steered) this.post({ type: 'steered', id: next.id, text: next.text });
       this.postQueue();
       await this.startTurn(next);
     }
+  }
+
+  private async executePlan(): Promise<void> {
+    if (this.running) {
+      this.post({
+        type: 'error',
+        message: 'Stop or finish the current run before executing a plan.',
+      });
+      return;
+    }
+    const plan = this.session.plan;
+    if (!plan || plan.steps.length === 0) return;
+    let nextIndex = plan.steps.findIndex((step) => !step.completed);
+    if (nextIndex < 0) {
+      plan.steps = plan.steps.map((step) => ({ ...step, completed: false }));
+      nextIndex = 0;
+    }
+    plan.executing = true;
+    plan.currentStep = nextIndex;
+    await this.persist();
+    this.postPlan();
+    await this.postSettings();
+    const next = this.nextPlanInstruction();
+    if (next) await this.startTurn(next);
+  }
+
+  private async togglePlanStep(index: number): Promise<void> {
+    const plan = this.session.plan;
+    const step = plan?.steps[index];
+    if (!plan || !step || this.running) return;
+    step.completed = !step.completed;
+    const nextIndex = plan.steps.findIndex((candidate) => !candidate.completed);
+    if (nextIndex < 0) {
+      plan.executing = false;
+      delete plan.currentStep;
+    } else if (plan.currentStep === index || plan.currentStep === undefined) {
+      plan.currentStep = nextIndex;
+    }
+    await this.persist();
+    this.postPlan();
+    await this.postSettings();
+  }
+
+  private completePlanStep(index: number): void {
+    const plan = this.session.plan;
+    const step = plan?.steps[index];
+    if (!plan || !step) return;
+    step.completed = true;
+    const nextIndex = plan.steps.findIndex((candidate) => !candidate.completed);
+    if (nextIndex < 0) {
+      plan.executing = false;
+      delete plan.currentStep;
+    } else {
+      plan.currentStep = nextIndex;
+    }
+    this.postPlan();
+  }
+
+  private nextPlanInstruction(): QueuedInstruction | undefined {
+    const plan = this.session.plan;
+    if (!plan?.executing || plan.currentStep === undefined) return undefined;
+    const step = plan.steps[plan.currentStep];
+    if (!step || step.completed) return undefined;
+    return {
+      id: crypto.randomUUID(),
+      text: `Execute approved plan step ${plan.currentStep + 1}/${plan.steps.length}: ${step.text}`,
+      planStepIndex: plan.currentStep,
+    };
   }
 
   private stop(): void {
@@ -833,6 +1089,7 @@ export class SessionManager implements vscode.Disposable {
       reasoningEffort: this.session.reasoningEffort ?? 'medium',
       ...(this.session.baseURL ? { baseURL: this.session.baseURL } : {}),
       ...(this.session.goal ? { goal: this.session.goal } : {}),
+      ...(this.session.plan ? { plan: this.session.plan } : {}),
     };
   }
 
@@ -845,6 +1102,13 @@ export class SessionManager implements vscode.Disposable {
 
   private postQueue(): void {
     this.post({ type: 'queueUpdated', items: [...this.queue.snapshot()] });
+  }
+
+  private postPlan(): void {
+    this.post({
+      type: 'planChanged',
+      ...(this.session.plan ? { plan: this.session.plan } : {}),
+    });
   }
 
   private post(message: HostToWebviewMessage): void {
@@ -911,4 +1175,13 @@ function fuzzyScore(value: string, query: string): number {
   const normalized = value.toLowerCase();
   const exact = normalized.indexOf(query.toLowerCase());
   return exact >= 0 ? exact : value.length;
+}
+
+async function waitUntil(predicate: () => boolean, timeoutMs = 5_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (predicate()) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error('Timed out waiting for Helm integration state.');
 }

@@ -34,4 +34,12 @@ describe('SteerQueue', () => {
     queue.clear();
     expect(queue.length).toBe(0);
   });
+
+  it('promotes a steer to the immediate follow-up when no loop boundary remains', () => {
+    const queue = new SteerQueue();
+    queue.enqueue({ id: 'queued', text: 'later' });
+    queue.steer({ id: 'steer', text: 'urgent' });
+    expect(queue.completeRun()).toMatchObject({ id: 'steer', steered: true });
+    expect(queue.completeRun()?.id).toBe('queued');
+  });
 });

@@ -93,6 +93,19 @@ export class ExtensionToolHost implements ToolHost, vscode.Disposable {
     pending?.resolve(accepted);
   }
 
+  async acceptNextPendingDiffForTest(timeoutMs = 5_000): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const diffId = this.diffs.keys().next().value as string | undefined;
+      if (diffId) {
+        this.resolveDiff(diffId, true);
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    throw new Error('Timed out waiting for Helm to propose a diff.');
+  }
+
   async undoLast(): Promise<boolean> {
     const checkpoint = this.checkpoints.pop();
     if (!checkpoint) return false;
