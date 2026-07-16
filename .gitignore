@@ -9,3 +9,4 @@ packages/extension/.vscode-test/
 packages/extension/dist-test/
 packages/webview/dist/
 site/dist/
+.codegraph/
