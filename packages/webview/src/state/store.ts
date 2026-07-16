@@ -6,6 +6,7 @@ import type {
   ProviderKeyState,
   RunState,
   SessionSettings,
+  SkillSettingsState,
   SuggestedAction,
   WebSettingsState,
 } from '@helm/core/browser';
@@ -41,7 +42,8 @@ export interface UiConnectionResult {
 export type PendingConfirmation =
   | { id: number; kind: 'fullAccess'; message: string }
   | { id: number; kind: 'clearSession'; message: string }
-  | { id: number; kind: 'deleteCodeGraph'; message: string };
+  | { id: number; kind: 'deleteCodeGraph'; message: string }
+  | { id: number; kind: 'skillsGit'; message: string; url: string };
 
 export interface UiState {
   version: string | undefined;
@@ -57,6 +59,7 @@ export interface UiState {
   settings: SessionSettings;
   hasApiKey: boolean;
   settingsOpen: boolean;
+  settingsFocus: 'skills' | undefined;
   notice: UiNotice | undefined;
   input: string;
   tokenUsage: { input: number; output: number; estimatedCost: number };
@@ -68,6 +71,7 @@ export interface UiState {
   webSettings: WebSettingsState;
   codeGraphSettings: CodeGraphSettingsState;
   codeGraphConsent: { gitRepository: boolean } | undefined;
+  skillsSettings: SkillSettingsState;
   pendingConfirmation: PendingConfirmation | undefined;
   eventSequence: number;
 }
@@ -95,6 +99,7 @@ export const initialUiState: UiState = {
   settings: DEFAULT_SETTINGS,
   hasApiKey: false,
   settingsOpen: false,
+  settingsFocus: undefined,
   notice: undefined,
   input: '',
   tokenUsage: { input: 0, output: 0, estimatedCost: 0 },
@@ -119,6 +124,7 @@ export const initialUiState: UiState = {
     edgeCount: 0,
   },
   codeGraphConsent: undefined,
+  skillsSettings: { items: [], errors: [] },
   pendingConfirmation: undefined,
   eventSequence: 0,
 };
@@ -126,7 +132,7 @@ export const initialUiState: UiState = {
 export type UiAction =
   | { type: 'hostMessage'; message: HostToWebviewMessage }
   | { type: 'inputChanged'; value: string }
-  | { type: 'settingsVisibilityChanged'; open: boolean }
+  | { type: 'settingsVisibilityChanged'; open: boolean; focus?: 'skills' }
   | { type: 'noticeDismissed'; id: number }
   | { type: 'suggestionsCleared' }
   | { type: 'contextItemsCleared' }
@@ -317,6 +323,7 @@ function reduceHostMessage(state: UiState, message: HostToWebviewMessage): UiSta
         providerKeyStates: message.providerKeys,
         webSettings: message.web,
         codeGraphSettings: message.codeGraph,
+        skillsSettings: message.skills,
       };
     case 'codeGraphProgress':
       return {
@@ -342,6 +349,21 @@ function reduceHostMessage(state: UiState, message: HostToWebviewMessage): UiSta
         },
       };
     }
+    case 'skillsGitConfirmationRequired': {
+      const id = state.eventSequence + 1;
+      return {
+        ...state,
+        eventSequence: id,
+        pendingConfirmation: {
+          id,
+          kind: 'skillsGit',
+          message: `Clone skills from ${message.url}? This runs git clone --depth 1 and validates each SKILL.md before copying it.`,
+          url: message.url,
+        },
+      };
+    }
+    case 'openSkillsSettings':
+      return { ...state, settingsOpen: true, settingsFocus: 'skills' };
     case 'modelsUpdated':
       return {
         ...state,
@@ -440,7 +462,11 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
     case 'inputChanged':
       return { ...state, input: action.value };
     case 'settingsVisibilityChanged':
-      return { ...state, settingsOpen: action.open };
+      return {
+        ...state,
+        settingsOpen: action.open,
+        settingsFocus: action.open ? action.focus : undefined,
+      };
     case 'noticeDismissed':
       return state.notice?.id === action.id ? { ...state, notice: undefined } : state;
     case 'suggestionsCleared':

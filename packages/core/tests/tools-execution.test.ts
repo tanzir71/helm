@@ -72,7 +72,7 @@ describe('agent tools', () => {
   it('loads both bundled workspace skills through the agent use_skill tool', async () => {
     const loader = new SkillLoader();
     const root = new URL('../../../.helm/skills/', import.meta.url);
-    const discovered = await loader.discover([root.pathname]);
+    const discovered = await loader.discover([{ path: root.pathname, source: 'workspace' }]);
     expect(discovered.map((skill) => skill.name).sort()).toEqual(['commit-message', 'write-tests']);
     const tools = createAgentTools(
       {

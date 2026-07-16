@@ -37,9 +37,31 @@ describe('instruction loaders', () => {
       '---\nname: write-tests\ndescription: Write unit tests\ncompatibility: tool calling\n---\n1. Read the code.\n2. Add tests.\n',
     );
     const loader = new SkillLoader();
-    expect(await loader.discover([root])).toMatchObject([{ name: 'write-tests' }]);
+    expect(await loader.discover([{ path: root, source: 'workspace' }])).toMatchObject([
+      { name: 'write-tests', source: 'workspace', active: true },
+    ]);
     expect(loader.promptIndex()).toContain('Compatibility');
     expect((await loader.load('write-tests')).body).toContain('Add tests');
     await expect(loader.load('missing')).rejects.toThrow('Unknown skill');
+  });
+
+  it('uses workspace over global over builtin and falls back when an override is disabled', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'helm-skills-precedence-'));
+    created.push(root);
+    const roots = ['builtin', 'global', 'workspace'] as const;
+    for (const source of roots) {
+      const directory = path.join(root, source, 'shared');
+      await mkdir(directory, { recursive: true });
+      await writeFile(
+        path.join(directory, 'SKILL.md'),
+        `---\nname: shared\ndescription: ${source} version\n---\nUse ${source}.\n`,
+      );
+    }
+    const loader = new SkillLoader();
+    await loader.discover(roots.map((source) => ({ path: path.join(root, source), source })));
+    expect((await loader.load('shared')).source).toBe('workspace');
+    loader.setEnabled('workspace:shared', false);
+    expect((await loader.load('shared')).source).toBe('global');
+    expect(loader.promptIndex()).toContain('global version');
   });
 });

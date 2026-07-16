@@ -8,6 +8,7 @@ describe('slash commands', () => {
       command: 'goal',
       argument: 'ship safely',
     });
+    expect(parseSlashCommand('/skills')).toEqual({ command: 'skills', argument: '' });
     expect(parseSlashCommand('/nope')).toBeUndefined();
   });
 

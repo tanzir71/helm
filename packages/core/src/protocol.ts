@@ -73,6 +73,22 @@ export interface CodeGraphSettingsState {
   error?: string;
 }
 
+export type SkillSettingsSource = 'builtin' | 'global' | 'workspace';
+
+export interface SkillSettingsItem {
+  id: string;
+  name: string;
+  description: string;
+  source: SkillSettingsSource;
+  enabled: boolean;
+  active: boolean;
+}
+
+export interface SkillSettingsState {
+  items: SkillSettingsItem[];
+  errors: string[];
+}
+
 export type WebviewToHostMessage =
   | { type: 'webviewReady' }
   | { type: 'userMessage'; id: string; text: string }
@@ -105,6 +121,10 @@ export type WebviewToHostMessage =
   | { type: 'reindexCodeGraph' }
   | { type: 'requestDeleteCodeGraphIndex' }
   | { type: 'deleteCodeGraphIndex' }
+  | { type: 'toggleSkill'; id: string; enabled: boolean }
+  | { type: 'addSkillsFolder' }
+  | { type: 'requestAddSkillsGit'; url: string }
+  | { type: 'confirmAddSkillsGit'; url: string; confirmed: boolean }
   | { type: 'openExternal'; url: string }
   | {
       type: 'testConnection';
@@ -176,6 +196,7 @@ export type HostToWebviewMessage =
       providerKeys: Record<string, ProviderKeyState>;
       web: WebSettingsState;
       codeGraph: CodeGraphSettingsState;
+      skills: SkillSettingsState;
     }
   | { type: 'modelsUpdated'; provider: string; models: Array<{ id: string; label: string }> }
   | { type: 'contextItems'; kind: 'file' | 'folder'; items: string[] }
@@ -184,6 +205,8 @@ export type HostToWebviewMessage =
   | { type: 'fullAccessConfirmationRequired' }
   | { type: 'codeGraphConsentRequired'; gitRepository: boolean }
   | { type: 'codeGraphDeleteConfirmationRequired' }
+  | { type: 'skillsGitConfirmationRequired'; url: string }
+  | { type: 'openSkillsSettings' }
   | { type: 'codeGraphProgress'; progress: CodeGraphProgress }
   | { type: 'error'; message: string; action?: string };
 

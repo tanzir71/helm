@@ -2,14 +2,14 @@
 
 ## Current
 
-R6 bundled skills pack — install the eleven verbatim playbooks, add builtin precedence and
-enable/disable state, and replace the placeholder Skills settings section with the full manager.
+R7 quality gate — add keyboard traversal coverage, extend theme checks to the new components,
+run every release gate, and prepare the required human screenshot/live-smoke checklist.
 
-1. Copy the eleven §6.3 skills verbatim and extend the loader with a typed builtin source.
-2. Implement workspace > global > builtin precedence and persistent builtin enable/disable state.
-3. Add folder and Git-URL import plus the `/skills` entry point.
-4. Build the Skills manager UI and validate every builtin/cross-reference/tool name.
-5. Run the recorded eval and all R6 gates, then commit R6.
+1. Add an Electron keyboard traversal test covering the complete panel interaction path.
+2. Extend light, dark, and high-contrast token checks to Skills, Web, and Code Graph UI.
+3. Run `pnpm verify`, the recorded eval, and the full Electron suite.
+4. Record the §4 screenshot matrix and live web/code-graph smoke repro steps for human review.
+5. Commit R7 and leave the human gate explicit until the visual/live review is confirmed.
 
 ## Milestones
 
@@ -63,11 +63,11 @@ enable/disable state, and replace the placeholder Skills settings section with t
 
 ### R6 — Skills pack
 
-- [ ] Eleven builtin skills created verbatim from §6.3; builtin source + precedence implemented
-- [ ] Skill-validity unit test per §6.4 passing for all eleven (including tool-name and
+- [x] Eleven builtin skills created verbatim from §6.3; builtin source + precedence implemented
+- [x] Skill-validity unit test per §6.4 passing for all eleven (including tool-name and
       cross-reference checks)
-- [ ] Skills manager UI + folder import + git-URL import + `/skills` command
-- [ ] Eval harness run (`pnpm eval` fixtures) confirms the skill-list prompt change causes no
+- [x] Skills manager UI + folder import + git-URL import + `/skills` command
+- [x] Eval harness run (`pnpm eval` fixtures) confirms the skill-list prompt change causes no
       tool-call regression
 
 ### R7 — Quality gate
@@ -100,6 +100,9 @@ None yet.
   the fallback. The current CLI intentionally removed the older handoff's `--json` flag.
 - Copy the installed per-platform CodeGraph bundle into `dist/codegraph` only during packaging;
   this keeps development builds small while ensuring the VSIX carries the fallback Node runtime.
+- Quote only the §6.3 frontmatter description scalars: the supplied text contains `: `, which is
+  invalid in an unquoted YAML plain scalar. Parsed description values and all skill bodies remain
+  verbatim.
 
 ## Log
 
@@ -125,3 +128,8 @@ None yet.
   fixture returned both known callers and source, the recorded architecture flow used one explore
   and zero reads, `pnpm verify` is green at 82.8% core coverage, Electron remains 5/5, and the
   packaged 51 MB VSIX includes the self-contained CodeGraph runtime.
+- [2026-07-16] R6 complete: eleven packaged playbooks load with workspace > global > builtin
+  precedence, per-workspace toggles, native folder import, confirmed shallow Git import, `/skills`,
+  and a compact source-grouped manager. Builtin validity/import/card regressions pass, the recorded
+  eval remains at 100% tool-call success, `pnpm verify` is green at 82.9% core coverage, and
+  Electron remains 5/5.

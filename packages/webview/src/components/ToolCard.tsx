@@ -29,14 +29,17 @@ export function friendlyToolName(name: string, input: unknown): string {
   const pathValue = Reflect.get(record, 'path');
   const commandValue = Reflect.get(record, 'command');
   const queryValue = Reflect.get(record, 'query');
+  const skillName = Reflect.get(record, 'name');
   const detail =
-    typeof pathValue === 'string'
-      ? ` \`${pathValue}\``
-      : typeof commandValue === 'string'
-        ? ` \`${commandValue}\``
-        : typeof queryValue === 'string'
-          ? ` “${queryValue}”`
-          : '';
+    name === 'use_skill' && typeof skillName === 'string'
+      ? ` \`${skillName}\``
+      : typeof pathValue === 'string'
+        ? ` \`${pathValue}\``
+        : typeof commandValue === 'string'
+          ? ` \`${commandValue}\``
+          : typeof queryValue === 'string'
+            ? ` “${queryValue}”`
+            : '';
   const labels: Record<string, string> = {
     read_file: 'Read',
     list_dir: 'Listed folder',

@@ -3,6 +3,7 @@ import type {
   CodeGraphSettingsState,
   ProviderKeyState,
   SessionSettings,
+  SkillSettingsState,
   WebSearchProviderId,
   WebSettingsState,
 } from '@helm/core/browser';
@@ -16,14 +17,18 @@ import { WebSection } from './WebSection';
 
 export interface SettingsViewProps {
   codeGraphSettings: CodeGraphSettingsState;
+  focusSection?: 'skills';
   connectionResults: Record<string, { message: string; ok: boolean }>;
   modelsByProvider: Record<string, Array<{ id: string; label: string }>>;
   onBack: () => void;
   onDeleteCodeGraph: () => void;
+  onAddSkillsFolder: () => void;
+  onAddSkillsGit: (url: string) => void;
   onIndexCodeGraph: (addToGitignore: boolean) => void;
   onOpenExternal: (url: string) => void;
   onReindexCodeGraph: () => void;
   onSaveCodeGraphSettings: (enabled: boolean) => void;
+  onToggleSkill: (id: string, enabled: boolean) => void;
   onRemoveApiKey: (provider: string) => void;
   onRemoveAllowedDomain: (domain: string) => void;
   onRemoveWebApiKey: (provider: WebSearchProviderId) => void;
@@ -51,19 +56,24 @@ export interface SettingsViewProps {
   onTestWebSearch: (provider: WebSearchProviderId, key?: string) => void;
   providerKeyStates: Record<string, ProviderKeyState>;
   settings: SessionSettings;
+  skillsSettings: SkillSettingsState;
   webSettings: WebSettingsState;
 }
 
 export function SettingsView({
   codeGraphSettings,
+  focusSection,
   connectionResults,
   modelsByProvider,
   onBack,
   onDeleteCodeGraph,
+  onAddSkillsFolder,
+  onAddSkillsGit,
   onIndexCodeGraph,
   onOpenExternal,
   onReindexCodeGraph,
   onSaveCodeGraphSettings,
+  onToggleSkill,
   onRemoveApiKey,
   onRemoveAllowedDomain,
   onRemoveWebApiKey,
@@ -76,6 +86,7 @@ export function SettingsView({
   onTestWebSearch,
   providerKeyStates,
   settings,
+  skillsSettings,
   webSettings,
 }: SettingsViewProps): React.JSX.Element {
   return (
@@ -111,7 +122,13 @@ export function SettingsView({
           onTest={onTestWebSearch}
           settings={webSettings}
         />
-        <SkillsSection />
+        <SkillsSection
+          focused={focusSection === 'skills'}
+          onAddFolder={onAddSkillsFolder}
+          onAddGit={onAddSkillsGit}
+          onToggle={onToggleSkill}
+          settings={skillsSettings}
+        />
         <CodeGraphSection
           onDelete={onDeleteCodeGraph}
           onIndex={onIndexCodeGraph}

@@ -22,6 +22,7 @@ import {
   type QueuedInstruction,
   type ResolvedModel,
   type SessionSettings,
+  type SkillSettingsState,
   type SuggestedAction,
   type WebSearchProviderId,
   type WebSettingsState,
@@ -31,6 +32,12 @@ import * as vscode from 'vscode';
 
 import { createRestoreMessages } from './restore-messages.js';
 import { CodeGraphService } from './codegraph-service.js';
+import {
+  importSkillsFolder,
+  importSkillsFromGit,
+  validateGitUrl,
+  type SkillImportResult,
+} from './skill-importer.js';
 import { ExtensionToolHost } from './tool-host.js';
 
 function promptSuggestions(labels: string[]): SuggestedAction[] {
@@ -54,6 +61,7 @@ const SESSION_KEY = 'helm.session.v1';
 const FULL_ACCESS_KEY = 'helm.fullAccessConfirmed';
 const TOOL_ALLOW_PATTERNS_KEY = 'helm.toolAllowPatterns.v1';
 const CODE_GRAPH_NOTICE_DISMISSED_KEY = 'helm.codeGraphNoticeDismissed.v1';
+const DISABLED_SKILLS_KEY = 'helm.disabledSkills.v1';
 const WEB_PROVIDERS: WebSearchProviderId[] = ['tavily', 'brave', 'exa', 'duckduckgo'];
 
 export class SessionManager implements vscode.Disposable {
@@ -71,6 +79,8 @@ export class SessionManager implements vscode.Disposable {
   private disposed = false;
   private testResolvedModel: ResolvedModel | undefined;
   private readonly connectedProviders = new Set<string>();
+  private readonly skillsReady: Promise<void>;
+  private skillImportErrors: string[] = [];
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -130,7 +140,7 @@ export class SessionManager implements vscode.Disposable {
     this.statusBar.command = 'helm.openChat';
     this.statusBar.show();
     this.updateStatus();
-    void this.discoverSkills();
+    this.skillsReady = this.discoverSkills();
   }
 
   dispose(): void {
@@ -457,6 +467,54 @@ export class SessionManager implements vscode.Disposable {
       case 'deleteCodeGraphIndex':
         await this.runCodeGraphOperation(() => this.codeGraph.deleteIndex());
         break;
+      case 'toggleSkill': {
+        try {
+          this.skills.setEnabled(message.id, message.enabled);
+          const disabled = new Set(
+            this.context.workspaceState.get<string[]>(DISABLED_SKILLS_KEY, []),
+          );
+          if (message.enabled) disabled.delete(message.id);
+          else disabled.add(message.id);
+          await this.context.workspaceState.update(DISABLED_SKILLS_KEY, [...disabled].sort());
+          this.skillImportErrors = [];
+        } catch (error) {
+          this.skillImportErrors = [error instanceof Error ? error.message : String(error)];
+        }
+        await this.postSettings();
+        break;
+      }
+      case 'addSkillsFolder': {
+        const selected = await vscode.window.showOpenDialog({
+          canSelectFiles: false,
+          canSelectFolders: true,
+          canSelectMany: false,
+          openLabel: 'Add skills',
+          title: 'Choose a folder containing one or more */SKILL.md files',
+        });
+        if (selected?.[0]) {
+          await this.runSkillImport(() =>
+            importSkillsFolder(selected[0]!.fsPath, this.globalSkillsRoot()),
+          );
+        }
+        break;
+      }
+      case 'requestAddSkillsGit':
+        try {
+          const url = validateGitUrl(message.url);
+          this.skillImportErrors = [];
+          this.post({ type: 'skillsGitConfirmationRequired', url });
+        } catch (error) {
+          this.skillImportErrors = [error instanceof Error ? error.message : String(error)];
+          await this.postSettings();
+        }
+        break;
+      case 'confirmAddSkillsGit':
+        if (message.confirmed) {
+          await this.runSkillImport(() =>
+            importSkillsFromGit(message.url, this.globalSkillsRoot()),
+          );
+        }
+        break;
       case 'openExternal': {
         const url = new URL(message.url);
         if (url.protocol === 'http:' || url.protocol === 'https:') {
@@ -524,6 +582,7 @@ export class SessionManager implements vscode.Disposable {
   }
 
   private async restore(): Promise<void> {
+    await this.skillsReady;
     for (const message of createRestoreMessages(
       this.session.messages,
       this.settings(),
@@ -547,6 +606,7 @@ export class SessionManager implements vscode.Disposable {
   }
 
   private async startTurn(item: QueuedInstruction): Promise<void> {
+    await this.skillsReady;
     const command = parseSlashCommand(item.text);
     if (command && (await this.handleImmediateCommand(command.command, command.argument))) return;
     const key = await this.context.secrets.get(secretKey(this.session.provider));
@@ -812,12 +872,17 @@ export class SessionManager implements vscode.Disposable {
       this.postSettings();
       return true;
     }
+    if (command === 'skills') {
+      this.post({ type: 'openSkillsSettings' });
+      await this.postSettings();
+      return true;
+    }
     if (command === 'status') {
       const usage = this.session.usage ?? { tokens: 0, cost: 0 };
       await this.addLocalAssistant(
         `**Provider:** ${this.session.provider}/${this.session.modelId}\n\n**Mode:** ${this.session.mode}\n\n**Usage:** ${usage.tokens.toLocaleString()} tokens · ≈$${usage.cost.toFixed(4)}\n\n**Queue:** ${this.queue.length}\n\n**Skills:** ${
           this.skills
-            .list()
+            .listActive()
             .map((skill) => skill.name)
             .join(', ') || 'none'
         }`,
@@ -826,7 +891,7 @@ export class SessionManager implements vscode.Disposable {
     }
     if (command === 'help') {
       await this.addLocalAssistant(
-        '`/plan` `/goal` `/review` `/init` `/model` `/status` `/compact` `/clear` `/help`',
+        '`/plan` `/goal` `/review` `/init` `/model` `/skills` `/status` `/compact` `/clear` `/help`',
       );
       return true;
     }
@@ -1093,10 +1158,58 @@ export class SessionManager implements vscode.Disposable {
   }
 
   private async discoverSkills(): Promise<void> {
-    await this.skills.discover([
-      path.join(this.workspaceRoot.fsPath, '.helm', 'skills'),
-      path.join(homedir(), '.helm', 'skills'),
-    ]);
+    const disabled = new Set(this.context.workspaceState.get<string[]>(DISABLED_SKILLS_KEY, []));
+    await this.skills.discover(
+      [
+        {
+          path: path.join(this.context.extensionUri.fsPath, 'assets', 'skills'),
+          source: 'builtin',
+        },
+        { path: this.globalSkillsRoot(), source: 'global' },
+        {
+          path: path.join(this.workspaceRoot.fsPath, '.helm', 'skills'),
+          source: 'workspace',
+        },
+      ],
+      disabled,
+    );
+  }
+
+  private globalSkillsRoot(): string {
+    return path.join(homedir(), '.helm', 'skills');
+  }
+
+  private skillsSettingsState(): SkillSettingsState {
+    return {
+      items: this.skills.list().map(({ id, name, description, source, enabled, active }) => ({
+        id,
+        name,
+        description,
+        source,
+        enabled,
+        active,
+      })),
+      errors: [
+        ...this.skillImportErrors,
+        ...this.skills.discoveryErrors().map((error) => `${error.file}: ${error.message}`),
+      ],
+    };
+  }
+
+  private async runSkillImport(importSkills: () => Promise<SkillImportResult>): Promise<void> {
+    try {
+      const result = await importSkills();
+      this.skillImportErrors = result.errors;
+      await this.discoverSkills();
+      if (result.imported.length > 0) {
+        void vscode.window.showInformationMessage(
+          `Added ${result.imported.length} skill${result.imported.length === 1 ? '' : 's'}: ${result.imported.join(', ')}`,
+        );
+      }
+    } catch (error) {
+      this.skillImportErrors = [error instanceof Error ? error.message : String(error)];
+    }
+    await this.postSettings();
   }
 
   private contextTurns(): Array<{ role: 'user' | 'assistant'; content: string }> {
@@ -1378,6 +1491,7 @@ export class SessionManager implements vscode.Disposable {
       providerKeys,
       web: await this.webSettingsState(),
       codeGraph: await this.codeGraph.settingsState(this.codeGraphFeatureEnabled()),
+      skills: this.skillsSettingsState(),
     });
   }
 

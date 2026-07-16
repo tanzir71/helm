@@ -1,5 +1,8 @@
-export type ClientCommand = 'openSettings';
+export type ClientCommand = 'openSettings' | 'openSkills';
 
 export function resolveClientCommand(input: string): ClientCommand | undefined {
-  return input.trim() === '/model' ? 'openSettings' : undefined;
+  const command = input.trim();
+  if (command === '/model') return 'openSettings';
+  if (command === '/skills') return 'openSkills';
+  return undefined;
 }

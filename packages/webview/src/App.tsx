@@ -103,6 +103,12 @@ export function App(): React.JSX.Element {
       vscode.postMessage({ type: 'confirmFullAccess', confirmed });
     } else if (confirmation.kind === 'deleteCodeGraph') {
       if (confirmed) vscode.postMessage({ type: 'deleteCodeGraphIndex' });
+    } else if (confirmation.kind === 'skillsGit') {
+      vscode.postMessage({
+        type: 'confirmAddSkillsGit',
+        url: confirmation.url,
+        confirmed,
+      });
     } else if (confirmed) {
       vscode.postMessage({ type: 'clearSession' });
     }
@@ -121,8 +127,13 @@ export function App(): React.JSX.Element {
   const send = (kind: SubmitKind, text = state.input) => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    if (resolveClientCommand(trimmed) === 'openSettings') {
-      dispatch({ type: 'settingsVisibilityChanged', open: true });
+    const clientCommand = resolveClientCommand(trimmed);
+    if (clientCommand === 'openSettings' || clientCommand === 'openSkills') {
+      dispatch({
+        type: 'settingsVisibilityChanged',
+        open: true,
+        ...(clientCommand === 'openSkills' ? { focus: 'skills' as const } : {}),
+      });
       dispatch({ type: 'inputChanged', value: '' });
       dispatch({ type: 'suggestionsCleared' });
       return;
@@ -189,8 +200,11 @@ export function App(): React.JSX.Element {
       <main className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
         <SettingsView
           connectionResults={state.connectionResults}
+          {...(state.settingsFocus ? { focusSection: state.settingsFocus } : {})}
           modelsByProvider={state.modelsByProvider}
           onBack={() => dispatch({ type: 'settingsVisibilityChanged', open: false })}
+          onAddSkillsFolder={() => vscode.postMessage({ type: 'addSkillsFolder' })}
+          onAddSkillsGit={(url) => vscode.postMessage({ type: 'requestAddSkillsGit', url })}
           onRemoveAllowedDomain={(domain) =>
             vscode.postMessage({ type: 'removeAllowedDomain', domain })
           }
@@ -220,6 +234,8 @@ export function App(): React.JSX.Element {
           }}
           providerKeyStates={state.providerKeyStates}
           settings={state.settings}
+          skillsSettings={state.skillsSettings}
+          onToggleSkill={(id, enabled) => vscode.postMessage({ type: 'toggleSkill', id, enabled })}
           webSettings={state.webSettings}
         />
       </main>

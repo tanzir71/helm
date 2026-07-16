@@ -1,5 +1,14 @@
 export type SlashCommand =
-  'plan' | 'goal' | 'review' | 'init' | 'model' | 'status' | 'compact' | 'clear' | 'help';
+  | 'plan'
+  | 'goal'
+  | 'review'
+  | 'init'
+  | 'model'
+  | 'skills'
+  | 'status'
+  | 'compact'
+  | 'clear'
+  | 'help';
 
 export const SLASH_COMMANDS: ReadonlyArray<{ name: SlashCommand; description: string }> = [
   { name: 'plan', description: 'Create a plan and wait before executing' },
@@ -7,6 +16,7 @@ export const SLASH_COMMANDS: ReadonlyArray<{ name: SlashCommand; description: st
   { name: 'review', description: 'Review staged and unstaged changes' },
   { name: 'init', description: 'Generate workspace AGENTS.md instructions' },
   { name: 'model', description: 'Choose provider and model' },
+  { name: 'skills', description: 'Manage built-in, global, and workspace skills' },
   { name: 'status', description: 'Show model, mode, usage, queue, and skills' },
   { name: 'compact', description: 'Compact old conversation context' },
   { name: 'clear', description: 'Start a new session after confirmation' },
