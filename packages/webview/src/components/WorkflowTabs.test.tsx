@@ -7,7 +7,13 @@ import { PlanCard } from './PlanCard';
 describe('WorkflowTabs', () => {
   it('renders an accessible persisted Solo workflow choice', () => {
     const markup = renderToStaticMarkup(
-      <WorkflowTabs disabled={false} onChange={() => undefined} workflow="solo" />,
+      <WorkflowTabs
+        disabled={false}
+        onChange={() => undefined}
+        onNewSession={() => undefined}
+        onOpenSettings={() => undefined}
+        workflow="solo"
+      />,
     );
 
     expect(markup).toContain('role="tablist"');
@@ -15,6 +21,9 @@ describe('WorkflowTabs', () => {
     expect(markup).toContain('Solo');
     expect(markup).toContain('aria-selected="true"');
     expect(markup).toContain('Plan first, approve once, then run toward the goal');
+    expect(markup).toContain('Start new session');
+    expect(markup).toContain('Open settings');
+    expect(markup).not.toContain('>Helm</span>');
   });
 
   it('explains the single Solo plan approval handoff', () => {

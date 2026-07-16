@@ -1,9 +1,13 @@
 import type { WorkflowMode } from '@helm/core/browser';
 import { useRef } from 'react';
 
+import { Icon } from './Icon';
+
 export interface WorkflowTabsProps {
   disabled: boolean;
   onChange: (workflow: WorkflowMode) => void;
+  onNewSession: () => void;
+  onOpenSettings: () => void;
   workflow: WorkflowMode;
 }
 
@@ -19,6 +23,8 @@ const workflows = [
 export function WorkflowTabs({
   disabled,
   onChange,
+  onNewSession,
+  onOpenSettings,
   workflow,
 }: WorkflowTabsProps): React.JSX.Element {
   const refs = useRef<Record<WorkflowMode, HTMLButtonElement | null>>({
@@ -32,39 +38,57 @@ export function WorkflowTabs({
   };
 
   return (
-    <div
-      aria-label="Helm workflow"
-      className="grid h-8 shrink-0 grid-cols-2 gap-1 border-b border-[var(--helm-border)] bg-[var(--helm-panel-background)] px-2 py-1"
-      role="tablist"
-    >
-      {workflows.map((item) => (
+    <div className="flex h-8 shrink-0 min-w-0 items-center gap-1 border-b border-[var(--helm-border)] bg-[var(--helm-panel-background)] px-2 py-1">
+      <div aria-label="Helm workflow" className="flex min-w-0 flex-1 gap-1" role="tablist">
+        {workflows.map((item) => (
+          <button
+            aria-controls="helm-workspace-panel"
+            aria-selected={workflow === item.id}
+            className={`min-w-0 flex-1 rounded-[var(--helm-radius-control)] border-0 px-2 py-0 text-[length:var(--helm-font-size-meta)] font-medium ${workflow === item.id ? 'bg-[var(--helm-list-active)] text-[var(--helm-list-active-foreground)]' : 'bg-transparent text-[var(--helm-description-foreground)] hover:bg-[var(--helm-toolbar-hover)] hover:text-[var(--helm-panel-foreground)]'}`}
+            disabled={disabled}
+            key={item.id}
+            onClick={() => choose(item.id)}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                event.preventDefault();
+                choose(item.id === 'assist' ? 'solo' : 'assist');
+              } else if (event.key === 'Home' || event.key === 'End') {
+                event.preventDefault();
+                choose(event.key === 'Home' ? 'assist' : 'solo');
+              }
+            }}
+            ref={(element) => {
+              refs.current[item.id] = element;
+            }}
+            role="tab"
+            tabIndex={workflow === item.id ? 0 : -1}
+            title={item.title}
+            type="button"
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex shrink-0 items-center gap-0.5">
         <button
-          aria-controls="helm-workspace-panel"
-          aria-selected={workflow === item.id}
-          className={`min-w-0 rounded-[var(--helm-radius-control)] border-0 px-2 py-0 text-[length:var(--helm-font-size-meta)] font-medium ${workflow === item.id ? 'bg-[var(--helm-list-active)] text-[var(--helm-list-active-foreground)]' : 'bg-transparent text-[var(--helm-description-foreground)] hover:bg-[var(--helm-toolbar-hover)] hover:text-[var(--helm-panel-foreground)]'}`}
-          disabled={disabled}
-          key={item.id}
-          onClick={() => choose(item.id)}
-          onKeyDown={(event) => {
-            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-              event.preventDefault();
-              choose(item.id === 'assist' ? 'solo' : 'assist');
-            } else if (event.key === 'Home' || event.key === 'End') {
-              event.preventDefault();
-              choose(event.key === 'Home' ? 'assist' : 'solo');
-            }
-          }}
-          ref={(element) => {
-            refs.current[item.id] = element;
-          }}
-          role="tab"
-          tabIndex={workflow === item.id ? 0 : -1}
-          title={item.title}
+          aria-label="Start new session"
+          className="flex size-6 items-center justify-center rounded-[var(--helm-radius-control)] border-0 bg-transparent p-0 hover:bg-[var(--helm-toolbar-hover)]"
+          onClick={onNewSession}
+          title="New session"
           type="button"
         >
-          {item.label}
+          <Icon name="add" size={16} />
         </button>
-      ))}
+        <button
+          aria-label="Open settings"
+          className="flex size-6 items-center justify-center rounded-[var(--helm-radius-control)] border-0 bg-transparent p-0 hover:bg-[var(--helm-toolbar-hover)]"
+          onClick={onOpenSettings}
+          title="Settings"
+          type="button"
+        >
+          <Icon name="settings-gear" size={16} />
+        </button>
+      </div>
     </div>
   );
 }

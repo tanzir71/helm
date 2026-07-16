@@ -16,7 +16,6 @@ import { SuggestionRow } from './components/Composer/SuggestionRow';
 import { DiffGroup } from './components/DiffGroup';
 import { EmptyState } from './components/EmptyState';
 import { GoalBanner } from './components/GoalBanner';
-import { Header } from './components/Header';
 import { Notice } from './components/Notice';
 import { PlanCard } from './components/PlanCard';
 import { SettingsView } from './components/Settings/SettingsView';
@@ -271,17 +270,15 @@ export function App(): React.JSX.Element {
       className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
       id="helm-workspace-panel"
     >
-      <Header
+      <WorkflowTabs
+        disabled={running}
         onNewSession={() => {
           if (state.messages.length === 0 || window.confirm('Start a new session?')) {
             vscode.postMessage({ type: 'clearSession' });
           }
         }}
-        onOpenSettings={() => dispatch({ type: 'settingsVisibilityChanged', open: true })}
-      />
-      <WorkflowTabs
-        disabled={running}
         onChange={(workflow) => vscode.postMessage({ type: 'setWorkflow', workflow })}
+        onOpenSettings={() => dispatch({ type: 'settingsVisibilityChanged', open: true })}
         workflow={state.settings.workflow}
       />
       {state.settings.goal && <GoalBanner goal={state.settings.goal} />}

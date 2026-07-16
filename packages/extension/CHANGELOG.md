@@ -11,3 +11,5 @@
   profiles and observable `use_skill` activity.
 - Automatic active-editor context moved from the composer pin into a clearly labeled Context
   setting.
+- Removed the duplicate in-webview Helm title and merged session/settings actions into the compact
+  Assist/Solo toolbar.
