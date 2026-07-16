@@ -24,6 +24,7 @@
     "package": "pnpm --filter ./packages/extension package",
     "site:build": "node site/build.mjs",
     "site:check": "node site/check.mjs",
+    "site:preview": "pnpm site:build && node site/serve.mjs",
     "site:verify": "pnpm site:build && pnpm site:check",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm --filter @helm/core build && pnpm -r --if-present typecheck",

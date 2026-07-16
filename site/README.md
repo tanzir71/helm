@@ -8,11 +8,13 @@ page, beginner extension and source-CLI onboarding, four SEO comparison pages, s
 
 ```bash
 pnpm site:verify
-python3 -m http.server 4173 --directory site/dist
+pnpm site:preview
 ```
 
-Open `http://localhost:4173`. During a GitHub Actions build, repository and release links derive
-from `GITHUB_REPOSITORY`. For local or custom-domain builds, override them explicitly:
+Open `http://127.0.0.1:4173`. Do not open `site/dist/index.html` directly: raw file previews may
+omit linked CSS and JavaScript, while GitHub Pages serves the site over HTTP. During a GitHub
+Actions build, repository and release links derive from `GITHUB_REPOSITORY`. For local or
+custom-domain builds, override them explicitly:
 
 ```bash
 HELM_GITHUB_REPOSITORY=owner/repo HELM_SITE_URL=https://example.com pnpm site:verify
