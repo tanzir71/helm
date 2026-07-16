@@ -1542,6 +1542,18 @@ kbd,
   text-transform: uppercase;
 }
 
+.footer-bottom a {
+  color: #aab4b1;
+  text-decoration: underline;
+  text-decoration-color: #3b4542;
+  text-underline-offset: 3px;
+}
+
+.footer-bottom a:hover {
+  color: var(--lime);
+  text-decoration-color: currentcolor;
+}
+
 .supports-reveal [data-reveal] {
   opacity: 0;
   transform: translateY(18px);

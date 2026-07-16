@@ -89,6 +89,7 @@ function footer(prefix) {
       </div>
       <div class="shell footer-bottom">
         <span>© <span data-current-year>2026</span> Helm contributors.</span>
+        <span>Built by <a href="https://tanziro.com/" target="_blank" rel="noreferrer">tanziro.com</a> · <a href="https://buymeacoffee.com/tanzir" target="_blank" rel="noreferrer">Buy me a coffee</a></span>
         <span>Built for GitHub Pages. No cookies. No tracking.</span>
       </div>
     </footer>`;
