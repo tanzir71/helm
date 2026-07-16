@@ -4,7 +4,7 @@ Helm is a beginner-friendly, bring-your-own-key coding agent for Visual Studio C
 terminal. The extension keeps provider credentials in VS Code SecretStorage, streams model text
 and reasoning into a native sidebar, and puts file changes and shell commands behind explicit
 safety controls. The globally installable CLI exposes the same headless model harness for quick
-terminal prompts.
+terminal prompts, read-only plans, persistent goals, and approval-gated Solo workflows.
 
 ## What it supports
 
@@ -51,8 +51,21 @@ For hosted models, pass `--model` and set its normal key variable. Helm infers c
 OPENAI_API_KEY=... helm-ai --model gpt-5 "Suggest a refactor"
 ```
 
-Run `helm-ai --help` for all flags and supported provider key variables. The current CLI is a
-single-turn headless harness; workspace tools, approvals, diffs, and Undo remain extension-first.
+The workflow commands stay deliberately short:
+
+```bash
+helm-ai plan "Add authentication"
+helm-ai goal "Ship the first public release"
+helm-ai solo "Implement the approved change"
+```
+
+`plan` returns a numbered read-only plan. `goal` saves an objective for the current working
+directory, and later prompts inherit it until `helm-ai goal clear`. `solo` generates a plan, asks
+for approval, and runs each approved step against the goal; pass `--yes` only when a script should
+approve non-interactively. Run `helm-ai --help` for all flags and provider key variables.
+
+The CLI remains a headless model harness. Workspace file tools, command execution, native diffs,
+checkpoints, and Undo remain extension-first.
 
 Ollama does not require an API key. Its default server URL is `http://localhost:11434`; Helm
 normalizes that to the server's OpenAI-compatible `/v1` endpoint for chat requests.

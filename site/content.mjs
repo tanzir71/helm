@@ -489,6 +489,6 @@ export const faqs = [
   {
     question: 'Is the CLI ready for everyday use?',
     answer:
-      'Yes for quick single-turn model prompts: install @tanziro/helm globally and run helm-ai from any terminal. The VS Code extension remains the full coding-agent experience for workspace tools, approvals, native diffs, checkpoints, and Undo.',
+      'Yes for headless prompts and workflows: install @tanziro/helm globally, then use helm-ai plan, helm-ai goal, or helm-ai solo from any project. Solo plans first and asks for approval before running its steps. The VS Code extension remains the full coding-agent experience for workspace file tools, native diffs, checkpoints, and Undo.',
   },
 ];

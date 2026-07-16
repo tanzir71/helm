@@ -35,12 +35,15 @@ const PROVIDER_KEY_VARIABLES: Readonly<Partial<Record<ProviderId, readonly strin
 
 export interface CliArguments {
   baseURL?: string;
+  command: 'run' | 'plan' | 'solo' | 'goal';
+  goal?: string;
   help: boolean;
   modelId?: string;
   prompt: string;
   provider?: ProviderId;
   reasoningEffort?: 'low' | 'medium' | 'high';
   version: boolean;
+  yes: boolean;
 }
 
 export interface RuntimeModelConfig {
@@ -56,8 +59,15 @@ export class CliUsageError extends Error {}
 
 export function parseCliArguments(argv: string[]): CliArguments {
   const prompt: string[] = [];
-  const parsed: CliArguments = { help: false, prompt: '', version: false };
+  const parsed: CliArguments = {
+    command: 'run',
+    help: false,
+    prompt: '',
+    version: false,
+    yes: false,
+  };
   let positionalOnly = false;
+  let commandSelected = false;
 
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index]!;
@@ -77,6 +87,24 @@ export function parseCliArguments(argv: string[]): CliArguments {
       parsed.version = true;
       continue;
     }
+    if (argument === '--plan') {
+      selectCommand(parsed, 'plan', commandSelected);
+      commandSelected = true;
+      continue;
+    }
+    if (argument === '--solo') {
+      selectCommand(parsed, 'solo', commandSelected);
+      commandSelected = true;
+      continue;
+    }
+    if (argument === '-y' || argument === '--yes') {
+      parsed.yes = true;
+      continue;
+    }
+    if (argument === '--goal') {
+      parsed.goal = readValue(argv, ++index, argument);
+      continue;
+    }
     if (argument === '-p' || argument === '--provider') {
       parsed.provider = providerId(readValue(argv, ++index, argument));
       continue;
@@ -94,10 +122,24 @@ export function parseCliArguments(argv: string[]): CliArguments {
       continue;
     }
     if (argument.startsWith('-')) throw new CliUsageError(`Unknown option: ${argument}`);
+    if (!commandSelected && prompt.length === 0 && isCommand(argument)) {
+      parsed.command = argument;
+      commandSelected = true;
+      continue;
+    }
     prompt.push(argument);
   }
 
-  parsed.prompt = prompt.join(' ').trim() || 'say hi';
+  parsed.prompt = prompt.join(' ').trim();
+  if (
+    !parsed.help &&
+    !parsed.version &&
+    (parsed.command === 'plan' || parsed.command === 'solo') &&
+    !parsed.prompt
+  ) {
+    throw new CliUsageError(`${parsed.command} requires a task prompt.`);
+  }
+  if (parsed.command === 'run' && !parsed.prompt) parsed.prompt = 'say hi';
   return parsed;
 }
 
@@ -138,6 +180,21 @@ function readValue(argv: string[], index: number, option: string): string {
   const value = argv[index];
   if (!value || value.startsWith('-')) throw new CliUsageError(`${option} requires a value.`);
   return value;
+}
+
+function isCommand(value: string): value is CliArguments['command'] {
+  return value === 'plan' || value === 'solo' || value === 'goal';
+}
+
+function selectCommand(
+  options: CliArguments,
+  command: 'plan' | 'solo',
+  commandSelected: boolean,
+): void {
+  if (commandSelected && options.command !== command) {
+    throw new CliUsageError('Choose only one of plan or solo.');
+  }
+  options.command = command;
 }
 
 function optionalProvider(value: string | undefined): ProviderId | undefined {

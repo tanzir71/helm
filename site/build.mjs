@@ -195,6 +195,9 @@ function codeBlock(code, label) {
 function homePage() {
   const cliInstallCommand = `npm install --global @tanziro/helm`;
   const runnerCommand = `helm-ai "Explain this project"`;
+  const workflowCommands = `helm-ai plan "Add authentication"
+helm-ai goal "Ship the first release"
+helm-ai solo "Implement the change"`;
   const ollamaCommand = `HELM_PROVIDER=ollama HELM_MODEL=qwen3-coder ${runnerCommand}`;
   const softwareSchema = {
     '@context': 'https://schema.org',
@@ -310,10 +313,10 @@ function homePage() {
           <div class="install-panel" id="install-cli" role="tabpanel" aria-labelledby="tab-cli" data-install-panel="cli" hidden>
             <div class="cli-grid">
               <div><span class="step-number">1</span><h3>Install globally</h3><p>Requires Node.js 20+. No repository clone or package manager setup.</p>${codeBlock(cliInstallCommand, 'install Helm CLI')}</div>
-              <div><span class="step-number">2</span><h3>Run the harness</h3><p>With no provider variables, Helm uses its safe no-key demo model.</p>${codeBlock(runnerCommand, 'run Helm CLI')}</div>
+              <div><span class="step-number">2</span><h3>Choose a workflow</h3><p>Plan, save a workspace goal, or let Solo plan and ask before it runs.</p>${codeBlock(workflowCommands, 'run Helm CLI')}</div>
             </div>
             <div class="cli-real-model"><div><span>Use a local Ollama model</span><p>Make sure Ollama is running and the model is installed first.</p></div>${codeBlock(ollamaCommand, 'run with Ollama')}</div>
-            <p class="install-disclaimer"><strong>Good to know:</strong> the CLI is a single-turn headless harness today. Use the VS Code extension when you want workspace tools, approvals, native diffs, checkpoints, and Undo.</p>
+            <p class="install-disclaimer"><strong>Good to know:</strong> the CLI supports prompts, read-only plans, persistent goals, and approval-gated Solo runs. Use the VS Code extension when you want workspace file tools, native diffs, checkpoints, and Undo.</p>
           </div>
         </div>
       </div>
