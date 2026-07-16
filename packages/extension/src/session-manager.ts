@@ -5,6 +5,7 @@ import {
   AgentRunner,
   ContextManager,
   createMockResolvedModel,
+  createSearchProvider,
   createToolLoopMockResolvedModel,
   loadAgentInstructions,
   parseSlashCommand,
@@ -22,6 +23,8 @@ import {
   type ResolvedModel,
   type SessionSettings,
   type SuggestedAction,
+  type WebSearchProviderId,
+  type WebSettingsState,
   type WebviewToHostMessage,
 } from '@helm/core';
 import * as vscode from 'vscode';
@@ -48,6 +51,8 @@ interface StoredSession {
 
 const SESSION_KEY = 'helm.session.v1';
 const FULL_ACCESS_KEY = 'helm.fullAccessConfirmed';
+const TOOL_ALLOW_PATTERNS_KEY = 'helm.toolAllowPatterns.v1';
+const WEB_PROVIDERS: WebSearchProviderId[] = ['tavily', 'brave', 'exa', 'duckduckgo'];
 
 export class SessionManager implements vscode.Disposable {
   private readonly runner = new AgentRunner();
@@ -79,6 +84,14 @@ export class SessionManager implements vscode.Disposable {
       context.globalStorageUri,
       (message) => this.post(message),
       async (name) => (await this.skills.load(name)).body,
+      {
+        allowPatterns: context.workspaceState.get<string[]>(TOOL_ALLOW_PATTERNS_KEY, []),
+        onAllowPatternsChanged: (patterns) => {
+          void context.workspaceState.update(TOOL_ALLOW_PATTERNS_KEY, patterns);
+          void this.postSettings();
+        },
+        webConfig: () => this.webRuntimeConfig(),
+      },
     );
     this.statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     this.statusBar.command = 'helm.openChat';
@@ -356,6 +369,42 @@ export class SessionManager implements vscode.Disposable {
         this.connectedProviders.delete(message.provider);
         this.postSettings();
         break;
+      case 'saveWebSettings': {
+        const configuration = vscode.workspace.getConfiguration('helm');
+        await configuration.update(
+          'web.enabled',
+          message.enabled,
+          vscode.ConfigurationTarget.Workspace,
+        );
+        await configuration.update(
+          'web.searchProvider',
+          message.provider,
+          vscode.ConfigurationTarget.Workspace,
+        );
+        if (message.key) {
+          await this.context.secrets.store(webSecretKey(message.provider), message.key);
+        }
+        await this.postSettings();
+        break;
+      }
+      case 'removeWebApiKey':
+        await this.context.secrets.delete(webSecretKey(message.provider));
+        await this.postSettings();
+        break;
+      case 'testWebSearch':
+        await this.testWebSearch(message.provider, message.key);
+        break;
+      case 'removeAllowedDomain':
+        this.toolHost.removeAllowedDomain(message.domain);
+        await this.postSettings();
+        break;
+      case 'openExternal': {
+        const url = new URL(message.url);
+        if (url.protocol === 'http:' || url.protocol === 'https:') {
+          await vscode.env.openExternal(vscode.Uri.parse(url.toString()));
+        }
+        break;
+      }
       case 'saveProviderSettings':
         if (!isProviderId(message.provider)) break;
         this.session.provider = message.provider;
@@ -509,6 +558,7 @@ export class SessionManager implements vscode.Disposable {
           : {}),
         context: await this.workspaceContext(item.text),
         reasoningEffort: this.session.reasoningEffort ?? 'medium',
+        webEnabled: this.webEnabled(),
         callbacks: {
           onText: (delta) => {
             text += delta;
@@ -1137,6 +1187,75 @@ export class SessionManager implements vscode.Disposable {
     };
   }
 
+  private webEnabled(): boolean {
+    return vscode.workspace.getConfiguration('helm').get<boolean>('web.enabled', true);
+  }
+
+  private webProvider(): WebSearchProviderId {
+    const configured = vscode.workspace
+      .getConfiguration('helm')
+      .get<string>('web.searchProvider', 'duckduckgo');
+    return isWebSearchProvider(configured) ? configured : 'duckduckgo';
+  }
+
+  private async webRuntimeConfig(): Promise<{
+    apiKey?: string;
+    enabled: boolean;
+    provider: WebSearchProviderId;
+  }> {
+    const provider = this.webProvider();
+    const apiKey = await this.context.secrets.get(webSecretKey(provider));
+    return {
+      enabled: this.webEnabled(),
+      provider,
+      ...(apiKey ? { apiKey } : {}),
+    };
+  }
+
+  private async webSettingsState(): Promise<WebSettingsState> {
+    const providerKeys = Object.fromEntries(
+      await Promise.all(
+        WEB_PROVIDERS.map(async (provider) => {
+          const key = await this.context.secrets.get(webSecretKey(provider));
+          return [
+            provider,
+            {
+              configured: provider === 'duckduckgo' || Boolean(key),
+              masked: key ? maskApiKey(key) : '',
+            },
+          ] as const;
+        }),
+      ),
+    );
+    return {
+      enabled: this.webEnabled(),
+      provider: this.webProvider(),
+      providerKeys,
+      allowedDomains: this.toolHost.allowedDomains(),
+    };
+  }
+
+  private async testWebSearch(provider: WebSearchProviderId, providedKey?: string): Promise<void> {
+    try {
+      const key = providedKey || (await this.context.secrets.get(webSecretKey(provider)));
+      const search = createSearchProvider(provider, { ...(key ? { apiKey: key } : {}) });
+      const results = await search.search('Helm coding agent', 1);
+      this.post({
+        type: 'connectionResult',
+        provider: `web:${provider}`,
+        ok: true,
+        message: results.length > 0 ? 'Search connected.' : 'Connected; no result returned.',
+      });
+    } catch (error) {
+      this.post({
+        type: 'connectionResult',
+        provider: `web:${provider}`,
+        ok: false,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   private async postSettings(): Promise<void> {
     const providerKeys = Object.fromEntries(
       await Promise.all(
@@ -1159,6 +1278,7 @@ export class SessionManager implements vscode.Disposable {
       settings: this.settings(),
       hasApiKey: providerKeys[this.session.provider]?.configured ?? false,
       providerKeys,
+      web: await this.webSettingsState(),
     });
   }
 
@@ -1191,6 +1311,10 @@ function secretKey(provider: string): string {
   return `helm.apiKey.${provider}`;
 }
 
+function webSecretKey(provider: WebSearchProviderId): string {
+  return `helm.web.apiKey.${provider}`;
+}
+
 function maskApiKey(key: string): string {
   if (key.length <= 8) return 'Saved securely';
   return `${key.slice(0, 3)}…${key.slice(-4)}`;
@@ -1198,6 +1322,10 @@ function maskApiKey(key: string): string {
 
 function isProviderId(value: string): value is ProviderId {
   return value in STATIC_MODELS;
+}
+
+function isWebSearchProvider(value: string): value is WebSearchProviderId {
+  return WEB_PROVIDERS.includes(value as WebSearchProviderId);
 }
 
 function extractPlan(text: string): string[] {

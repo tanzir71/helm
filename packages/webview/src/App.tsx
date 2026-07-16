@@ -32,10 +32,6 @@ import { resolveClientCommand } from './state/client-command';
 import { initialUiState, uiReducer } from './state/store';
 import { vscode } from './vscode';
 
-function commandPattern(command: string): string {
-  return command.trim().split(/\s+/u).slice(0, 2).join(' ');
-}
-
 function statusForTool(name: string): string {
   const statuses: Record<string, string> = {
     read_file: 'Reading a file…',
@@ -192,14 +188,26 @@ export function App(): React.JSX.Element {
           connectionResults={state.connectionResults}
           modelsByProvider={state.modelsByProvider}
           onBack={() => dispatch({ type: 'settingsVisibilityChanged', open: false })}
+          onRemoveAllowedDomain={(domain) =>
+            vscode.postMessage({ type: 'removeAllowedDomain', domain })
+          }
           onRemoveApiKey={(provider) => vscode.postMessage({ type: 'removeApiKey', provider })}
+          onRemoveWebApiKey={(provider) =>
+            vscode.postMessage({ type: 'removeWebApiKey', provider })
+          }
           onRequestModels={requestModels}
           onSaveApiKey={saveApiKey}
           onSaveDefaults={(defaults) => vscode.postMessage({ type: 'saveDefaults', ...defaults })}
           onSaveProviderSettings={saveProviderSettings}
+          onSaveWebSettings={(web) => vscode.postMessage({ type: 'saveWebSettings', ...web })}
           onTestConnection={testConnection}
+          onTestWebSearch={(provider, key) => {
+            dispatch({ type: 'connectionTestStarted', provider: `web:${provider}` });
+            vscode.postMessage({ type: 'testWebSearch', provider, ...(key ? { key } : {}) });
+          }}
           providerKeyStates={state.providerKeyStates}
           settings={state.settings}
+          webSettings={state.webSettings}
         />
       </main>
     );
@@ -250,8 +258,8 @@ export function App(): React.JSX.Element {
                 vscode.postMessage({
                   type: 'approveTool',
                   callId: tool.id,
-                  ...(always && tool.approval
-                    ? { alwaysAllowPattern: commandPattern(tool.approval) }
+                  ...(always && tool.alwaysAllowPattern
+                    ? { alwaysAllowPattern: tool.alwaysAllowPattern }
                     : {}),
                 });
                 dispatch({ type: 'toolApprovalHandled', id: tool.id });
@@ -260,6 +268,7 @@ export function App(): React.JSX.Element {
                 vscode.postMessage({ type: 'rejectTool', callId: tool.id });
                 dispatch({ type: 'toolApprovalHandled', id: tool.id });
               }}
+              onOpenUrl={(url) => vscode.postMessage({ type: 'openExternal', url })}
               tool={tool}
             />
           );

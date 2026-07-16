@@ -1,0 +1,11 @@
+{
+  "web": {
+    "results": [
+      {
+        "title": "Brave Search API",
+        "url": "https://api.search.brave.com/docs",
+        "description": "Independent web search results."
+      }
+    ]
+  }
+}

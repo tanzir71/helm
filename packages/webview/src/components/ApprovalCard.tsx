@@ -4,6 +4,7 @@ import { Card } from './Card';
 import { Icon } from './Icon';
 
 export interface ApprovalCardProps {
+  alwaysLabel?: string;
   detail: string;
   onAllow: (always: boolean) => void;
   onDeny: () => void;
@@ -18,7 +19,12 @@ export function resolveApprovalShortcut(event: {
   return undefined;
 }
 
-export function ApprovalCard({ detail, onAllow, onDeny }: ApprovalCardProps): React.JSX.Element {
+export function ApprovalCard({
+  alwaysLabel = 'Always allow this pattern',
+  detail,
+  onAllow,
+  onDeny,
+}: ApprovalCardProps): React.JSX.Element {
   const cardRef = useRef<HTMLElement>(null);
 
   useEffect(() => cardRef.current?.focus(), []);
@@ -68,7 +74,7 @@ export function ApprovalCard({ detail, onAllow, onDeny }: ApprovalCardProps): Re
           onClick={() => onAllow(true)}
           type="button"
         >
-          Always allow this pattern
+          {alwaysLabel}
         </button>
         <span className="ml-auto text-[var(--helm-description-foreground)]">Alt+Enter · Esc</span>
       </div>

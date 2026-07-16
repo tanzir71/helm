@@ -17,6 +17,7 @@ export type IconName =
   | 'folder'
   | 'globe'
   | 'mention'
+  | 'link-external'
   | 'pinned'
   | 'play'
   | 'search'

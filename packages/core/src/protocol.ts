@@ -42,6 +42,15 @@ export interface ProviderKeyState {
   masked: string;
 }
 
+export type WebSearchProviderId = 'tavily' | 'brave' | 'exa' | 'duckduckgo';
+
+export interface WebSettingsState {
+  allowedDomains: string[];
+  enabled: boolean;
+  provider: WebSearchProviderId;
+  providerKeys: Record<string, { configured: boolean; masked: string }>;
+}
+
 export type WebviewToHostMessage =
   | { type: 'webviewReady' }
   | { type: 'userMessage'; id: string; text: string }
@@ -59,6 +68,16 @@ export type WebviewToHostMessage =
   | { type: 'openSettings' }
   | { type: 'saveApiKey'; provider: string; key: string }
   | { type: 'removeApiKey'; provider: string }
+  | {
+      type: 'saveWebSettings';
+      enabled: boolean;
+      provider: WebSearchProviderId;
+      key?: string;
+    }
+  | { type: 'removeWebApiKey'; provider: WebSearchProviderId }
+  | { type: 'testWebSearch'; provider: WebSearchProviderId; key?: string }
+  | { type: 'removeAllowedDomain'; domain: string }
+  | { type: 'openExternal'; url: string }
   | {
       type: 'testConnection';
       provider: string;
@@ -107,7 +126,13 @@ export type HostToWebviewMessage =
   | { type: 'reasoningReplaced'; runId: string; text: string }
   | { type: 'toolCallStarted'; callId: string; tool: string; input: unknown }
   | { type: 'toolCallFinished'; callId: string; tool: string; output: unknown; ok: boolean }
-  | { type: 'toolApprovalRequested'; callId: string; tool: string; summary: string }
+  | {
+      type: 'toolApprovalRequested';
+      callId: string;
+      tool: string;
+      summary: string;
+      alwaysAllowPattern?: string;
+    }
   | { type: 'diffProposed'; diffId: string; path: string; before: string; after: string }
   | { type: 'suggestions'; items: SuggestedAction[] }
   | { type: 'suggestionAvailable'; item: SuggestedAction }
@@ -121,6 +146,7 @@ export type HostToWebviewMessage =
       settings: SessionSettings;
       hasApiKey: boolean;
       providerKeys: Record<string, ProviderKeyState>;
+      web: WebSettingsState;
     }
   | { type: 'modelsUpdated'; provider: string; models: Array<{ id: string; label: string }> }
   | { type: 'contextItems'; kind: 'file' | 'folder'; items: string[] }

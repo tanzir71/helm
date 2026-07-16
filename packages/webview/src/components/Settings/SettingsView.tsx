@@ -1,4 +1,10 @@
-import type { ApprovalMode, ProviderKeyState, SessionSettings } from '@helm/core/browser';
+import type {
+  ApprovalMode,
+  ProviderKeyState,
+  SessionSettings,
+  WebSearchProviderId,
+  WebSettingsState,
+} from '@helm/core/browser';
 
 import { Icon } from '../Icon';
 import { CodeGraphSection } from './CodeGraphSection';
@@ -12,6 +18,8 @@ export interface SettingsViewProps {
   modelsByProvider: Record<string, Array<{ id: string; label: string }>>;
   onBack: () => void;
   onRemoveApiKey: (provider: string) => void;
+  onRemoveAllowedDomain: (domain: string) => void;
+  onRemoveWebApiKey: (provider: WebSearchProviderId) => void;
   onRequestModels: (provider: string, baseURL: string, key?: string) => void;
   onSaveApiKey: (provider: string, key: string) => void;
   onSaveProviderSettings: (
@@ -28,8 +36,15 @@ export interface SettingsViewProps {
     reasoningEffort: SessionSettings['reasoningEffort'];
   }) => void;
   onTestConnection: (provider: string, modelId: string, baseURL: string, key?: string) => void;
+  onSaveWebSettings: (settings: {
+    enabled: boolean;
+    provider: WebSearchProviderId;
+    key?: string;
+  }) => void;
+  onTestWebSearch: (provider: WebSearchProviderId, key?: string) => void;
   providerKeyStates: Record<string, ProviderKeyState>;
   settings: SessionSettings;
+  webSettings: WebSettingsState;
 }
 
 export function SettingsView({
@@ -37,13 +52,18 @@ export function SettingsView({
   modelsByProvider,
   onBack,
   onRemoveApiKey,
+  onRemoveAllowedDomain,
+  onRemoveWebApiKey,
   onRequestModels,
   onSaveApiKey,
   onSaveDefaults,
   onSaveProviderSettings,
+  onSaveWebSettings,
   onTestConnection,
+  onTestWebSearch,
   providerKeyStates,
   settings,
+  webSettings,
 }: SettingsViewProps): React.JSX.Element {
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-[var(--helm-panel-background)]">
@@ -70,7 +90,14 @@ export function SettingsView({
           settings={settings}
         />
         <DefaultsSection onSave={onSaveDefaults} settings={settings} />
-        <WebSection />
+        <WebSection
+          connectionResults={connectionResults}
+          onRemoveAllowedDomain={onRemoveAllowedDomain}
+          onRemoveApiKey={onRemoveWebApiKey}
+          onSave={onSaveWebSettings}
+          onTest={onTestWebSearch}
+          settings={webSettings}
+        />
         <SkillsSection />
         <CodeGraphSection />
       </div>

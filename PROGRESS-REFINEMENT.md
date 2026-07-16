@@ -2,14 +2,14 @@
 
 ## Current
 
-R4 built-in web tools — add grounded search and safe page fetching as first-class agent tools with
-provider configuration, approvals, transcript UI, and recorded-fixture coverage.
+R5 built-in code graph — embed codegraph behind one `explore_code` tool, implement the runtime
+version gate and index lifecycle, and prove graph-assisted discovery on a fixture repository.
 
-1. Add the web search/fetch runtime and pure safety/content-conversion helpers.
-2. Implement Tavily, Brave, Exa, and keyless DuckDuckGo adapters behind one normalized result type.
-3. Register `web_search` and `web_fetch`, including domain approvals and system-prompt guidance.
-4. Complete Settings → Web and the transcript WebCard with external-browser actions.
-5. Add fixtures/eval coverage, run all gates, and commit R4.
+1. Verify the package API and add the Node-version/runtime selection layer.
+2. Register `explore_code` only when an index exists and add its system-prompt guidance.
+3. Implement consent, `.gitignore`, indexing/sync, re-index, and delete lifecycle controls.
+4. Complete Settings → Code graph and the graph activity card.
+5. Add fixture/eval coverage, run all gates, and commit R5.
 
 ## Milestones
 
@@ -41,13 +41,13 @@ provider configuration, approvals, transcript UI, and recorded-fixture coverage.
 
 ### R4 — Web tools
 
-- [ ] `web_search` with Tavily/Brave/Exa adapters + keyless DuckDuckGo fallback; recorded-fixture
+- [x] `web_search` with Tavily/Brave/Exa adapters + keyless DuckDuckGo fallback; recorded-fixture
       tests
-- [ ] `web_fetch` with readability→markdown, 20k truncation, SSRF guard (unit-tested),
+- [x] `web_fetch` with readability→markdown, 20k truncation, SSRF guard (unit-tested),
       untrusted-content wrapper
-- [ ] Approval flow: fetch domain patterns persisted; search auto-allowed; Settings → Web section
-- [ ] System-prompt section per §5.1.3; WebCard UI; external-browser link opening
-- [ ] Eval fixture: recorded search→fetch→answer transcript passes
+- [x] Approval flow: fetch domain patterns persisted; search auto-allowed; Settings → Web section
+- [x] System-prompt section per §5.1.3; WebCard UI; external-browser link opening
+- [x] Eval fixture: recorded search→fetch→answer transcript passes
 
 ### R5 — Code graph
 
@@ -91,6 +91,11 @@ None yet.
 - Pin `@ai-sdk/provider` 2.0.3 for `@openrouter/ai-sdk-provider` through pnpm package extensions;
   the provider package omits that runtime dependency and otherwise resolves the incompatible v3
   copy introduced by the webview workspace.
+- Use the current official Tavily bearer POST, Brave subscription-token GET, and Exa API-key POST
+  contracts behind a normalized search interface; keep DuckDuckGo HTML as the labeled keyless
+  fallback.
+- Persist typed `command:` and `domain:` approval patterns in workspace state so command prefixes
+  and fetch-domain permissions cannot collide.
 
 ## Log
 
@@ -107,3 +112,7 @@ None yet.
   key-gated empty states, and the in-panel provider/default settings view are implemented. All ten
   audited regressions have focused coverage where automatable; `pnpm verify` is green and Electron
   remains 5/5.
+- [2026-07-16] R4 complete: Tavily, Brave, Exa, and DuckDuckGo search adapters plus guarded readable
+  web fetch are first-class tools; settings, approvals, untrusted-content handling, WebCard links,
+  and the search→fetch→answer eval are green. Live DuckDuckGo search and TypeScript-doc fetch
+  smoke checks passed, `pnpm verify` is green at 82.5% core coverage, and Electron remains 5/5.

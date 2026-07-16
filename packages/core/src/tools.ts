@@ -17,6 +17,11 @@ export const TOOL_SCHEMAS = {
   edit_file: z.object({ path: z.string(), old_text: z.string(), new_text: z.string() }),
   run_command: z.object({ command: z.string(), cwd: z.string().optional() }),
   fetch_url: z.object({ url: z.string().url() }),
+  web_search: z.object({
+    query: z.string(),
+    max_results: z.number().int().min(1).max(8).optional(),
+  }),
+  web_fetch: z.object({ url: z.string().url() }),
   use_skill: z.object({ name: z.string() }),
 } as const;
 
@@ -37,16 +42,21 @@ export interface ToolEventCallbacks {
   onLoopWarning?(warning: string, pause: boolean): void;
 }
 
-export function allowedToolNames(mode: ApprovalMode): ToolName[] {
-  if (mode === 'chat') return ['read_file', 'list_dir', 'glob', 'grep', 'use_skill'];
-  return Object.keys(TOOL_SCHEMAS) as ToolName[];
+export function allowedToolNames(mode: ApprovalMode, webEnabled = false): ToolName[] {
+  const webTools: ToolName[] = webEnabled ? ['web_search', 'web_fetch'] : [];
+  if (mode === 'chat') return ['read_file', 'list_dir', 'glob', 'grep', ...webTools, 'use_skill'];
+  return (Object.keys(TOOL_SCHEMAS) as ToolName[]).filter(
+    (name) => webEnabled || (name !== 'web_search' && name !== 'web_fetch'),
+  );
 }
 
 export function createAgentTools(
   host: ToolHost,
   mode: ApprovalMode,
   callbacks: ToolEventCallbacks = {},
+  options: { webEnabled?: boolean } = {},
 ) {
+  const webEnabled = options.webEnabled === true;
   const guard = new RepeatCallGuard();
   const execute = async (
     name: ToolName,
@@ -54,7 +64,7 @@ export function createAgentTools(
     callId: string,
     signal?: AbortSignal,
   ): Promise<unknown> => {
-    if (!allowedToolNames(mode).includes(name))
+    if (!allowedToolNames(mode, webEnabled).includes(name))
       throw new Error(`${name} is unavailable in Chat mode.`);
     const repeat = guard.record(name, input);
     if (repeat.warning) callbacks.onLoopWarning?.(repeat.warning, repeat.pause);
@@ -90,7 +100,7 @@ export function createAgentTools(
       };
     }
   };
-  return {
+  const commonTools = {
     read_file: tool({
       description: 'Read numbered lines from a workspace file.',
       inputSchema: feedbackSchema(TOOL_SCHEMAS.read_file),
@@ -137,6 +147,18 @@ export function createAgentTools(
       execute: (input, options) =>
         execute('fetch_url', input, options.toolCallId, options.abortSignal),
     }),
+    web_search: tool({
+      description: 'Search the live public web for current information and source URLs.',
+      inputSchema: feedbackSchema(TOOL_SCHEMAS.web_search),
+      execute: (input, options) =>
+        execute('web_search', input, options.toolCallId, options.abortSignal),
+    }),
+    web_fetch: tool({
+      description: 'Fetch one public web page as safe readable markdown.',
+      inputSchema: feedbackSchema(TOOL_SCHEMAS.web_fetch),
+      execute: (input, options) =>
+        execute('web_fetch', input, options.toolCallId, options.abortSignal),
+    }),
     use_skill: tool({
       description: 'Load the full instructions for one discovered skill.',
       inputSchema: feedbackSchema(TOOL_SCHEMAS.use_skill),
@@ -144,6 +166,11 @@ export function createAgentTools(
         execute('use_skill', input, options.toolCallId, options.abortSignal),
     }),
   };
+  if (!webEnabled) {
+    Reflect.deleteProperty(commonTools, 'web_search');
+    Reflect.deleteProperty(commonTools, 'web_fetch');
+  }
+  return commonTools;
 }
 
 function feedbackSchema(schema: z.ZodType) {

@@ -6,6 +6,7 @@ import type {
   RunState,
   SessionSettings,
   SuggestedAction,
+  WebSettingsState,
 } from '@helm/core/browser';
 
 export interface UiTool {
@@ -15,6 +16,7 @@ export interface UiTool {
   output?: unknown;
   ok?: boolean;
   approval?: string;
+  alwaysAllowPattern?: string;
 }
 
 export interface UiDiff {
@@ -61,6 +63,7 @@ export interface UiState {
   modelsByProvider: Record<string, Array<{ id: string; label: string }>>;
   providerKeyStates: Record<string, ProviderKeyState>;
   connectionResults: Record<string, UiConnectionResult>;
+  webSettings: WebSettingsState;
   pendingConfirmation: PendingConfirmation | undefined;
   eventSequence: number;
 }
@@ -96,6 +99,12 @@ export const initialUiState: UiState = {
   modelsByProvider: {},
   providerKeyStates: {},
   connectionResults: {},
+  webSettings: {
+    allowedDomains: [],
+    enabled: true,
+    provider: 'duckduckgo',
+    providerKeys: {},
+  },
   pendingConfirmation: undefined,
   eventSequence: 0,
 };
@@ -260,7 +269,15 @@ function reduceHostMessage(state: UiState, message: HostToWebviewMessage): UiSta
       return {
         ...state,
         tools: state.tools.map((tool) =>
-          tool.id === message.callId ? { ...tool, approval: message.summary } : tool,
+          tool.id === message.callId
+            ? {
+                ...tool,
+                approval: message.summary,
+                ...(message.alwaysAllowPattern
+                  ? { alwaysAllowPattern: message.alwaysAllowPattern }
+                  : {}),
+              }
+            : tool,
         ),
       };
     case 'diffProposed':
@@ -283,6 +300,7 @@ function reduceHostMessage(state: UiState, message: HostToWebviewMessage): UiSta
         plan: message.settings.plan,
         hasApiKey: message.hasApiKey,
         providerKeyStates: message.providerKeys,
+        webSettings: message.web,
       };
     case 'modelsUpdated':
       return {
@@ -401,6 +419,7 @@ export function uiReducer(state: UiState, action: UiAction): UiState {
           if (tool.id !== action.id) return tool;
           const next = { ...tool };
           delete next.approval;
+          delete next.alwaysAllowPattern;
           return next;
         }),
       };

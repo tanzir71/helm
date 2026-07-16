@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { ApprovalCard } from './ApprovalCard';
 import { Card } from './Card';
 import { Icon, type IconName } from './Icon';
+import { WebCard } from './WebCard';
 
 export interface ToolCardProps {
   onApprove: (always: boolean) => void;
   onReject: () => void;
+  onOpenUrl: (url: string) => void;
   tool: UiTool;
 }
 
@@ -51,10 +53,25 @@ export function friendlyToolName(name: string, input: unknown): string {
   return `${labels[name] ?? name}${detail}`;
 }
 
-export function ToolCard({ onApprove, onReject, tool }: ToolCardProps): React.JSX.Element {
+export function ToolCard({
+  onApprove,
+  onOpenUrl,
+  onReject,
+  tool,
+}: ToolCardProps): React.JSX.Element {
   const [expanded, setExpanded] = useState(false);
   if (tool.approval) {
-    return <ApprovalCard detail={tool.approval} onAllow={onApprove} onDeny={onReject} />;
+    return (
+      <ApprovalCard
+        {...(tool.name === 'web_fetch' ? { alwaysLabel: 'Always allow this domain' } : {})}
+        detail={tool.approval}
+        onAllow={onApprove}
+        onDeny={onReject}
+      />
+    );
+  }
+  if (tool.name === 'web_search' || tool.name === 'web_fetch') {
+    return <WebCard onOpenUrl={onOpenUrl} tool={tool} />;
   }
 
   const failed = tool.ok === false;

@@ -9,6 +9,10 @@ interface EvalTask {
   expectedTool: string;
 }
 
+interface ResearchFixture {
+  transcript: Array<{ role: string; tool?: string; answer?: string }>;
+}
+
 describe('recorded open-model eval fixtures', () => {
   for (const family of ['kimi', 'glm', 'deepseek', 'qwen']) {
     it(`repairs every ${family} fixture into the expected tool call`, async () => {
@@ -22,6 +26,18 @@ describe('recorded open-model eval fixtures', () => {
       }
     });
   }
+
+  it('locks the grounded web_search to web_fetch to answer flow', async () => {
+    const fixture = JSON.parse(
+      await readFile(new URL('../evals/fixtures/web-research.json', import.meta.url), 'utf8'),
+    ) as ResearchFixture;
+    const assistantTurns = fixture.transcript.filter((turn) => turn.role === 'assistant');
+    expect(assistantTurns.map((turn) => turn.tool).filter(Boolean)).toEqual([
+      'web_search',
+      'web_fetch',
+    ]);
+    expect(assistantTurns.at(-1)?.answer).toContain('https://example.com/docs');
+  });
 });
 
 function toolName(value: unknown): string | undefined {

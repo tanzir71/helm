@@ -24,6 +24,10 @@ interface LiveTask {
   expectedTool: ToolName;
 }
 
+interface WebResearchFixture {
+  transcript: Array<{ role: string; tool?: string; answer?: string }>;
+}
+
 const LIVE_TASKS: readonly LiveTask[] = [
   {
     name: 'read file',
@@ -108,6 +112,19 @@ async function runFixtures(modelId: string): Promise<void> {
     if (guard.record(tool ?? 'invalid', parsed.value).warning) loopIncidents += 1;
   }
   report(modelId, 'recorded fixture', tasks.length, success, repaired, loopIncidents);
+  const webFixture = JSON.parse(
+    await readFile(
+      path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'web-research.json'),
+      'utf8',
+    ),
+  ) as WebResearchFixture;
+  const assistantTurns = webFixture.transcript.filter((turn) => turn.role === 'assistant');
+  const webFlowPasses =
+    assistantTurns[0]?.tool === 'web_search' &&
+    assistantTurns[1]?.tool === 'web_fetch' &&
+    Boolean(assistantTurns[2]?.answer);
+  process.stdout.write(`Web research flow: ${webFlowPasses ? 'pass' : 'fail'}\n`);
+  if (!webFlowPasses) process.exitCode = 1;
 }
 
 async function runLive(modelId: string): Promise<void> {

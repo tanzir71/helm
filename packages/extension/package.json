@@ -58,6 +58,22 @@
           "type": "string",
           "default": "",
           "description": "Optional inexpensive model for summaries and suggestions."
+        },
+        "helm.web.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Helm's built-in web search and safe page fetch tools."
+        },
+        "helm.web.searchProvider": {
+          "type": "string",
+          "enum": [
+            "tavily",
+            "brave",
+            "exa",
+            "duckduckgo"
+          ],
+          "default": "duckduckgo",
+          "description": "Search provider used by Helm's built-in web search tool."
         }
       }
     }

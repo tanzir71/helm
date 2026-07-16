@@ -52,6 +52,7 @@ export interface AgentRunOptions {
   planStep?: string;
   context?: string;
   reasoningEffort?: 'low' | 'medium' | 'high';
+  webEnabled?: boolean;
 }
 
 export interface AgentRunResult {
@@ -67,13 +68,18 @@ export class AgentRunner {
     const callbacks = options.callbacks ?? {};
     let loopReminder: string | undefined;
     const tools = options.host
-      ? createAgentTools(options.host, mode, {
-          ...callbacks,
-          onLoopWarning: (warning, pause) => {
-            loopReminder = warning;
-            callbacks.onLoopWarning?.(warning, pause);
+      ? createAgentTools(
+          options.host,
+          mode,
+          {
+            ...callbacks,
+            onLoopWarning: (warning, pause) => {
+              loopReminder = warning;
+              callbacks.onLoopWarning?.(warning, pause);
+            },
           },
-        })
+          { webEnabled: options.webEnabled === true },
+        )
       : undefined;
     const system = buildSystemPrompt({
       profile: options.resolvedModel.profile,
@@ -83,6 +89,7 @@ export class AgentRunner {
       ...(options.goal ? { goal: options.goal } : {}),
       ...(options.planStep ? { planStep: options.planStep } : {}),
       ...(options.context ? { context: options.context } : {}),
+      ...(options.webEnabled ? { webEnabled: true } : {}),
     });
     const messages: ModelMessage[] = [
       ...(options.history ?? []).map((message): ModelMessage => ({
@@ -102,6 +109,7 @@ export class AgentRunner {
             activeTools: advisedToolNames(
               mode,
               options.resolvedModel.profile.toolCalling.maxToolsAdvised,
+              options.webEnabled === true,
             ),
             experimental_repairToolCall: async ({ toolCall }) => {
               const repaired = repairJson(toolCall.input);
@@ -208,8 +216,8 @@ function stripReasoningFromStepMessages(messages: ModelMessage[]): ModelMessage[
   return changed ? sanitized : messages;
 }
 
-function advisedToolNames(mode: ApprovalMode, limit: number) {
-  const allowed = allowedToolNames(mode);
+function advisedToolNames(mode: ApprovalMode, limit: number, webEnabled: boolean) {
+  const allowed = allowedToolNames(mode, webEnabled);
   if (allowed.length <= limit) return allowed;
   return allowed.filter((name) => name !== 'fetch_url').slice(0, limit);
 }

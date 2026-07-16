@@ -19,6 +19,14 @@ describe('agent tools', () => {
       'use_skill',
     ]);
     expect(allowedToolNames('agent')).toContain('run_command');
+    expect(allowedToolNames('chat', true)).toContain('web_search');
+    expect(allowedToolNames('chat', true)).toContain('web_fetch');
+  });
+
+  it('registers web tools only when the capability is enabled', () => {
+    const host: ToolHost = { execute: async () => 'ok' };
+    expect(createAgentTools(host, 'agent')).not.toHaveProperty('web_search');
+    expect(createAgentTools(host, 'agent', {}, { webEnabled: true })).toHaveProperty('web_search');
   });
 
   it('forwards validated calls and emits friendly lifecycle events', async () => {

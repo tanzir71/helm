@@ -1,12 +1,45 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 
-import type { ApprovalMode, HostToWebviewMessage, ToolHost, ToolName } from '@helm/core';
+import {
+  createSearchProvider,
+  fetchReadableWebPage,
+  formatSearchResults,
+  type ApprovalMode,
+  type HostToWebviewMessage,
+  type ToolHost,
+  type ToolName,
+  type WebSearchProviderId,
+} from '@helm/core';
 import * as vscode from 'vscode';
 
+import {
+  allowedDomains,
+  commandAllowPattern,
+  domainAllowPattern,
+  isCommandAllowed,
+  isDomainAllowed as matchesAllowedDomain,
+} from './allow-patterns.js';
 import { isDeniedCommand } from './safety.js';
 
 type PostMessage = (message: HostToWebviewMessage) => void;
+
+export interface WebRuntimeConfig {
+  apiKey?: string;
+  enabled: boolean;
+  provider: WebSearchProviderId;
+}
+
+export interface ExtensionToolHostOptions {
+  allowPatterns?: string[];
+  onAllowPatternsChanged?: (patterns: string[]) => void;
+  webConfig: () => Promise<WebRuntimeConfig>;
+}
+
+interface PendingApproval {
+  alwaysAllowPattern?: string;
+  finish: (accepted: boolean) => void;
+}
 
 interface PendingDiff {
   id: string;
@@ -37,9 +70,9 @@ class DiffContentProvider implements vscode.TextDocumentContentProvider {
 }
 
 export class ExtensionToolHost implements ToolHost, vscode.Disposable {
-  private readonly approvals = new Map<string, (accepted: boolean) => void>();
+  private readonly approvals = new Map<string, PendingApproval>();
   private readonly diffs = new Map<string, PendingDiff>();
-  private readonly alwaysAllowed = new Set<string>();
+  private readonly alwaysAllowed: Set<string>;
   private readonly checkpoints: Checkpoint[] = [];
   private readonly diffProvider = new DiffContentProvider();
   private readonly disposables: vscode.Disposable[];
@@ -51,7 +84,9 @@ export class ExtensionToolHost implements ToolHost, vscode.Disposable {
     private readonly storageUri: vscode.Uri,
     private readonly post: PostMessage,
     private readonly skillBody: (name: string) => Promise<string>,
+    private readonly options: ExtensionToolHostOptions,
   ) {
+    this.alwaysAllowed = new Set(options.allowPatterns ?? []);
     this.disposables = [
       vscode.workspace.registerTextDocumentContentProvider('helm-diff', this.diffProvider),
     ];
@@ -78,14 +113,31 @@ export class ExtensionToolHost implements ToolHost, vscode.Disposable {
   }
 
   approve(callId: string, alwaysAllowPattern?: string): void {
-    if (alwaysAllowPattern) this.alwaysAllowed.add(alwaysAllowPattern);
-    this.approvals.get(callId)?.(true);
+    const pending = this.approvals.get(callId);
+    if (
+      alwaysAllowPattern &&
+      pending?.alwaysAllowPattern &&
+      alwaysAllowPattern === pending.alwaysAllowPattern
+    ) {
+      this.alwaysAllowed.add(alwaysAllowPattern);
+      this.options.onAllowPatternsChanged?.([...this.alwaysAllowed].sort());
+    }
+    pending?.finish(true);
     this.approvals.delete(callId);
   }
 
   reject(callId: string): void {
-    this.approvals.get(callId)?.(false);
+    this.approvals.get(callId)?.finish(false);
     this.approvals.delete(callId);
+  }
+
+  allowedDomains(): string[] {
+    return allowedDomains(this.alwaysAllowed);
+  }
+
+  removeAllowedDomain(domain: string): void {
+    this.alwaysAllowed.delete(`domain:${domain}`);
+    this.options.onAllowPatternsChanged?.([...this.alwaysAllowed].sort());
   }
 
   resolveDiff(diffId: string, accepted: boolean): void {
@@ -163,6 +215,10 @@ export class ExtensionToolHost implements ToolHost, vscode.Disposable {
         return this.runCommand(input, context);
       case 'fetch_url':
         return this.fetchUrl(input, context.signal);
+      case 'web_search':
+        return this.webSearch(input, context.signal);
+      case 'web_fetch':
+        return this.webFetch(input, context);
     }
   }
 
@@ -361,11 +417,13 @@ export class ExtensionToolHost implements ToolHost, vscode.Disposable {
     if (isDeniedCommand(command))
       throw new Error('Helm blocked a dangerous command, even in Full Access mode.');
     if (context.mode === 'agent' && !this.isAlwaysAllowed(command)) {
+      const alwaysAllowPattern = commandAllowPattern(command);
       this.post({
         type: 'toolApprovalRequested',
         callId: context.callId,
         tool: 'run_command',
         summary: command,
+        alwaysAllowPattern,
       });
       const accepted = await new Promise<boolean>((resolve) => {
         const finish = (decision: boolean) => {
@@ -373,7 +431,7 @@ export class ExtensionToolHost implements ToolHost, vscode.Disposable {
           resolve(decision);
         };
         const abort = () => finish(false);
-        this.approvals.set(context.callId, finish);
+        this.approvals.set(context.callId, { finish, alwaysAllowPattern });
         if (context.signal?.aborted) finish(false);
         else context.signal?.addEventListener('abort', abort, { once: true });
       });
@@ -385,7 +443,7 @@ export class ExtensionToolHost implements ToolHost, vscode.Disposable {
   }
 
   private isAlwaysAllowed(command: string): boolean {
-    return [...this.alwaysAllowed].some((pattern) => command.startsWith(pattern));
+    return isCommandAllowed(this.alwaysAllowed, command);
   }
 
   private async executeInTerminal(
@@ -415,13 +473,58 @@ export class ExtensionToolHost implements ToolHost, vscode.Disposable {
   }
 
   private async fetchUrl(input: Record<string, unknown>, signal?: AbortSignal): Promise<string> {
+    return fetchReadableWebPage(String(input.url), signal);
+  }
+
+  private async webSearch(input: Record<string, unknown>, signal?: AbortSignal): Promise<string> {
+    const config = await this.options.webConfig();
+    if (!config.enabled) throw new Error('Built-in web tools are disabled in Settings.');
+    const provider = createSearchProvider(config.provider, {
+      ...(config.apiKey ? { apiKey: config.apiKey } : {}),
+    });
+    const results = await provider.search(
+      String(input.query),
+      Number(input.max_results ?? 5),
+      signal,
+    );
+    return formatSearchResults(provider.id, results);
+  }
+
+  private async webFetch(
+    input: Record<string, unknown>,
+    context: { mode: ApprovalMode; callId: string; signal?: AbortSignal },
+  ): Promise<string> {
+    const config = await this.options.webConfig();
+    if (!config.enabled) throw new Error('Built-in web tools are disabled in Settings.');
     const url = new URL(String(input.url));
-    if (url.protocol !== 'https:' && url.protocol !== 'http:')
-      throw new Error('Only HTTP(S) URLs are allowed.');
-    const response = await fetch(url, { ...(signal ? { signal } : {}) });
-    if (!response.ok) throw new Error(`Fetch failed with HTTP ${response.status}.`);
-    const text = await response.text();
-    return text.slice(0, 1_000_000);
+    const domain = url.hostname.toLowerCase();
+    if (context.mode === 'agent' && !this.isDomainAllowed(domain)) {
+      const alwaysAllowPattern = domainAllowPattern(domain);
+      this.post({
+        type: 'toolApprovalRequested',
+        callId: context.callId,
+        tool: 'web_fetch',
+        summary: `Fetch ${url.toString()}`,
+        alwaysAllowPattern,
+      });
+      const accepted = await new Promise<boolean>((resolve) => {
+        const finish = (decision: boolean) => {
+          context.signal?.removeEventListener('abort', abort);
+          resolve(decision);
+        };
+        const abort = () => finish(false);
+        this.approvals.set(context.callId, { finish, alwaysAllowPattern });
+        if (context.signal?.aborted) finish(false);
+        else context.signal?.addEventListener('abort', abort, { once: true });
+      });
+      this.approvals.delete(context.callId);
+      if (!accepted) throw new Error('User rejected the web fetch.');
+    }
+    return fetchReadableWebPage(url.toString(), context.signal);
+  }
+
+  private isDomainAllowed(domain: string): boolean {
+    return matchesAllowedDomain(this.alwaysAllowed, domain);
   }
 
   private workspaceUri(relativePath: string): vscode.Uri {

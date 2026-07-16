@@ -14,3 +14,5 @@ export * from './suggestions.js';
 export * from './system-prompt.js';
 export * from './tool-robustness.js';
 export * from './tools.js';
+export * from './web-fetch.js';
+export * from './web-search.js';
