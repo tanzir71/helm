@@ -15,7 +15,7 @@ terminal prompts.
 - Markdown responses, highlighted code, collapsible reasoning, live tool cards, diffs, and Undo
 - Queued prompts, mid-run steering, Stop/Resume, persistent goals, and slash commands
 - `@file`, `@folder`, `@problems`, and `@terminal` context plus optional active-file context
-- Root and nested `AGENTS.md`, progressively loaded `SKILL.md` files, and context compaction
+- Root and nested `AGENTS.md`, intent-routed `SKILL.md` workflows, and context compaction
 - Open-model profiles, tool-call repair, loop detection, and a fixture-backed reliability eval
 
 Helm has no account service, server, or telemetry. Model requests go from the extension host to
@@ -79,6 +79,11 @@ Context mentions are selected with a fuzzy popup:
 Available slash commands are `/plan`, `/goal`, `/review`, `/init`, `/model`, `/status`,
 `/compact`, `/clear`, and `/help`. A goal persists with the workspace session and is re-anchored
 during long tool loops.
+
+Skills require no command or manual selection. Before acting, Helm matches the meaning of the task
+against active skill descriptions, loads each clearly relevant workflow with `use_skill`, and shows
+that activation in the normal tool activity. It ignores unrelated skills and supports workspace or
+global skill overrides from **Settings → Skills**.
 
 ### Safety modes
 

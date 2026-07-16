@@ -13,4 +13,8 @@ waits for one plan approval, promotes the task to the persistent goal, and execu
 step under Agent safety. Accepted edits reveal their real workspace file so progress stays visible
 in the editor.
 
+Active skills route automatically from task intent: Helm loads clearly relevant `SKILL.md`
+instructions before other tools without requiring a command or exact trigger phrase. Skill loading
+appears in the normal tool activity and can be managed under **Settings → Skills**.
+
 The extension has no account system, server, or telemetry.

@@ -204,6 +204,56 @@ describe('AgentRunner', () => {
     expect(kimiPrompts[1]).toContain('private chain');
     expect(deepSeekPrompts[1]).not.toContain('private chain');
   });
+
+  it('keeps skill routing available when web tools exceed a model tool limit', async () => {
+    let toolNames: string[] = [];
+    const model: LanguageModel = {
+      specificationVersion: 'v2',
+      provider: 'mock',
+      modelId: 'constrained-tools',
+      supportedUrls: {},
+      doGenerate: async () => ({
+        content: [{ type: 'text', text: 'unused' }],
+        finishReason: 'stop',
+        usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+        warnings: [],
+      }),
+      doStream: async (options) => {
+        toolNames = (options.tools ?? []).map((item) => item.name);
+        return {
+          stream: simulateReadableStream({
+            chunks: [
+              { type: 'stream-start' as const, warnings: [] },
+              { type: 'text-start' as const, id: 'answer' },
+              { type: 'text-delta' as const, id: 'answer', delta: 'done' },
+              { type: 'text-end' as const, id: 'answer' },
+              {
+                type: 'finish' as const,
+                finishReason: 'stop' as const,
+                usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+              },
+            ],
+          }),
+        };
+      },
+    };
+    await new AgentRunner().run({
+      resolvedModel: {
+        provider: 'ollama',
+        modelId: 'generic',
+        model,
+        profile: resolveModelProfile('generic'),
+      },
+      prompt: 'Research the API and write tests.',
+      host: { execute: vi.fn(async () => 'ok'), loadSkill: vi.fn(async () => 'skill') },
+      skillsIndex: '- write-tests: Write tests for existing code.',
+      webEnabled: true,
+      codeGraphEnabled: true,
+    });
+
+    expect(toolNames).toContain('use_skill');
+    expect(toolNames).toContain('explore_code');
+  });
 });
 
 function reasoningToolModel(prompts: string[]): LanguageModel {

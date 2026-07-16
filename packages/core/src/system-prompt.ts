@@ -38,8 +38,16 @@ export function buildSystemPrompt(parts: SystemPromptParts): string {
     );
   }
   if (parts.agentsInstructions) sections.push(`Project instructions:\n${parts.agentsInstructions}`);
-  if (parts.skillsIndex)
-    sections.push(`Available skills (load full text with use_skill):\n${parts.skillsIndex}`);
+  if (parts.skillsIndex) {
+    sections.push(`Skill routing is automatic:
+1. Before any other tool, compare the user's intent with every available skill description.
+2. If one or more skills clearly apply, call \`use_skill\` for each relevant skill, then follow the loaded instructions. Do not wait for the user to name or request a skill.
+3. Match by semantic intent; trigger words in descriptions are examples, not an exact-keyword requirement.
+4. Do not load unrelated skills. If no skill clearly applies, continue normally.
+
+Available skills (load full text with use_skill):
+${parts.skillsIndex}`);
+  }
   // Dynamic session context remains at the end to keep the cacheable prefix stable.
   if (parts.context) sections.push(`Current workspace context:\n${parts.context}`);
   if (parts.goal) sections.push(`Persistent session goal: ${parts.goal}`);

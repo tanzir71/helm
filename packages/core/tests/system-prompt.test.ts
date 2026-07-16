@@ -38,4 +38,20 @@ describe('system prompt', () => {
     expect(enabled).toContain('One explore call replaces dozens of grep/read calls.');
     expect(disabled).not.toContain('explore_code');
   });
+
+  it('automatically routes clear task intent through relevant skills', () => {
+    const prompt = buildSystemPrompt({
+      profile: resolveModelProfile('qwen3-coder'),
+      mode: 'agent',
+      skillsIndex:
+        '- write-tests: Write unit tests. Trigger words: test, spec.\n- security-check: Audit code for vulnerabilities.',
+    });
+
+    expect(prompt).toContain('Skill routing is automatic');
+    expect(prompt).toContain('Before any other tool');
+    expect(prompt).toContain('call `use_skill` for each relevant skill');
+    expect(prompt).toContain('Do not wait for the user to name or request a skill');
+    expect(prompt).toContain('trigger words in descriptions are examples');
+    expect(prompt).toContain('Do not load unrelated skills');
+  });
 });

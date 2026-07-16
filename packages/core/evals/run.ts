@@ -22,6 +22,7 @@ interface LiveTask {
   name: string;
   prompt: string;
   expectedTool: ToolName;
+  skillsIndex?: string;
 }
 
 interface WebResearchFixture {
@@ -75,9 +76,11 @@ const LIVE_TASKS: readonly LiveTask[] = [
     expectedTool: 'fetch_url',
   },
   {
-    name: 'skill',
-    prompt: 'Call `use_skill` once with name `write-tests`.',
+    name: 'automatic skill routing',
+    prompt: 'Add focused unit tests for the parser. Choose the relevant workflow before acting.',
     expectedTool: 'use_skill',
+    skillsIndex:
+      '- write-tests: Write unit tests using the project framework. Trigger words: tests, coverage, spec.',
   },
   {
     name: 'read range',
@@ -174,6 +177,7 @@ async function runLive(modelId: string): Promise<void> {
         mode: 'fullAccess',
         host: evalHost,
         maxSteps: 1,
+        ...(task.skillsIndex ? { skillsIndex: task.skillsIndex } : {}),
         callbacks: {
           onFinished: (event) => {
             if (event.tool === task.expectedTool && event.ok) correctFinishedCall = true;

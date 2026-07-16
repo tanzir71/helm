@@ -230,7 +230,10 @@ function advisedToolNames(
 ) {
   const allowed = allowedToolNames(mode, webEnabled, codeGraphEnabled);
   if (allowed.length <= limit) return allowed;
-  return allowed.filter((name) => name !== 'fetch_url').slice(0, limit);
+  const candidates = allowed.filter((name) => name !== 'fetch_url');
+  const routingTools = candidates.filter((name) => name === 'use_skill' || name === 'explore_code');
+  const taskTools = candidates.filter((name) => name !== 'use_skill' && name !== 'explore_code');
+  return [...routingTools, ...taskTools].slice(0, limit);
 }
 
 function reasoningProviderOptions(
