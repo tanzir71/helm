@@ -71,7 +71,7 @@ export const comparisons = [
     rows: [
       [
         'Primary surface',
-        'VS Code extension; source CLI runner',
+        'VS Code extension and global CLI',
         'Interactive and headless CLI with optional IDE context',
       ],
       [
@@ -122,7 +122,7 @@ export const comparisons = [
     rows: [
       [
         'Primary surface',
-        'VS Code extension; source CLI runner',
+        'VS Code extension and global CLI',
         'Cursor desktop workspace and Cursor CLI',
       ],
       [
@@ -173,7 +173,7 @@ export const comparisons = [
     rows: [
       [
         'Primary surface',
-        'VS Code extension; source CLI runner',
+        'VS Code extension and global CLI',
         'GitHub, multiple IDEs, CLI, and cloud agents',
       ],
       [
@@ -224,7 +224,7 @@ export const comparisons = [
     rows: [
       [
         'Primary surface',
-        'VS Code extension; source CLI runner',
+        'VS Code extension and global CLI',
         'VS Code, JetBrains, CLI, cloud agents, browser, mobile, and Slack',
       ],
       [
@@ -275,7 +275,7 @@ export const comparisons = [
     rows: [
       [
         'Primary surface',
-        'VS Code extension; source CLI runner',
+        'VS Code extension and global CLI',
         'Editor extension and terminal agent',
       ],
       [
@@ -326,7 +326,7 @@ export const comparisons = [
     rows: [
       [
         'Primary surface',
-        'VS Code extension; source CLI runner',
+        'VS Code extension and global CLI',
         'Terminal UI, desktop app, web app, and IDE extension',
       ],
       [
@@ -377,7 +377,7 @@ export const comparisons = [
     rows: [
       [
         'Primary surface',
-        'VS Code extension; source CLI runner',
+        'VS Code extension and global CLI',
         'Terminal pair programmer with IDE and browser workflows',
       ],
       [
@@ -428,7 +428,7 @@ export const comparisons = [
     rows: [
       [
         'Primary surface',
-        'VS Code extension; source CLI runner',
+        'VS Code extension and global CLI',
         'Terminal, IDE, desktop, browser, and automation',
       ],
       [
@@ -489,6 +489,6 @@ export const faqs = [
   {
     question: 'Is the CLI ready for everyday use?',
     answer:
-      'The repository currently includes a source CLI runner for evaluating the core harness. The VS Code extension is the polished beginner experience; the CLI path is best for developers who are comfortable cloning the repository and using pnpm.',
+      'Yes for quick single-turn model prompts: install @tanziro/helm globally and run helm-ai from any terminal. The VS Code extension remains the full coding-agent experience for workspace tools, approvals, native diffs, checkpoints, and Undo.',
   },
 ];

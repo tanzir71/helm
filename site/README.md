@@ -1,7 +1,7 @@
 # Helm marketing site
 
 The site is a dependency-free static build designed for GitHub Pages. It publishes the landing
-page, beginner extension and source-CLI onboarding, eight SEO comparison pages, structured data,
+page, beginner extension and globally installed CLI onboarding, eight SEO comparison pages, structured data,
 `sitemap.xml`, and `robots.txt`.
 
 ## Build locally

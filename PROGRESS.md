@@ -16,7 +16,7 @@ manual QA remains.
 
 ### M0 — Scaffold
 
-- [x] pnpm monorepo with `core`, `extension`, `webview`; strict TS; ESLint+Prettier; Vitest wired
+- [x] pnpm monorepo with `core`, `cli`, `extension`, `webview`; strict TS; ESLint+Prettier; Vitest wired
 - [x] Extension activates; sidebar webview says hello via typed protocol
 - [x] CI script `pnpm verify` = lint + typecheck + test + build
 
@@ -35,7 +35,7 @@ manual QA remains.
 - [x] Profile-driven reasoning extraction and history handling are unit-tested
 - [x] Model picker, live lists, effort selector, and cost badges
 - [x] Provider errors are friendly and actionable
-- [x] Headless core example runs with any configured provider
+- [x] Globally installable headless CLI runs with any configured provider
 
 ### M3 — Context
 
@@ -110,12 +110,15 @@ manual QA remains.
 - Use Z.ai's OpenAI-compatible endpoint for GLM so all four open-weight providers share the tested
   flat native-function tool contract.
 - Prefer `rg` for host search and fall back to capped VS Code filesystem scanning when unavailable.
-- No task-runner dependency: pnpm recursive scripts are sufficient for three packages.
+- No task-runner dependency: pnpm recursive scripts are sufficient for four packages.
 
 ## Log
 
 - [2026-07-16] M0 done — strict monorepo scaffold, typed hello protocol, three package builds, and
   `pnpm verify` established.
+- [2026-07-16] Source runner promoted to publishable `@tanziro/helm` package — bundled `helm-ai`
+  executable, low-friction provider configuration, packed global-install smoke test, and landing
+  page onboarding verified.
 - [2026-07-16] M1 done — SecretStorage settings, persisted streaming chat, reasoning UI, Stop, and
   provider error translation implemented.
 - [2026-07-16] M2 done — nine provider routes, live/static model lists, per-model profiles,

@@ -1,8 +1,10 @@
 # Helm
 
-Helm is a beginner-friendly, bring-your-own-key coding agent for Visual Studio Code. It keeps
-provider credentials in VS Code SecretStorage, streams model text and reasoning into a native
-sidebar, and puts file changes and shell commands behind explicit safety controls.
+Helm is a beginner-friendly, bring-your-own-key coding agent for Visual Studio Code and the
+terminal. The extension keeps provider credentials in VS Code SecretStorage, streams model text
+and reasoning into a native sidebar, and puts file changes and shell commands behind explicit
+safety controls. The globally installable CLI exposes the same headless model harness for quick
+terminal prompts.
 
 ## What it supports
 
@@ -18,13 +20,38 @@ sidebar, and puts file changes and shell commands behind explicit safety control
 Helm has no account service, server, or telemetry. Model requests go from the extension host to
 the provider you configure.
 
-## Install and start
+## Install the VS Code extension
 
 1. Build a VSIX with `pnpm package`, or use a supplied `dist/helm-<version>.vsix`.
 2. In VS Code, run **Extensions: Install from VSIX…** and reload the window.
 3. Open a folder, select the Helm compass in the Activity Bar, then choose **Set up a provider**.
 4. Pick a provider and model, paste its API key, and use **Test connection**.
 5. Start in **Chat** for read-only exploration or **Agent** for approval-gated edits and commands.
+
+## Install the CLI
+
+The npm package installs the conflict-free `helm-ai` command (`helm` is already widely used by the
+Kubernetes package manager):
+
+```bash
+npm install --global @tanziro/helm
+helm-ai "Explain this project"
+```
+
+That first command works without configuration against a safe demo model. For a local model:
+
+```bash
+helm-ai --provider ollama --model qwen3-coder "Explain this project"
+```
+
+For hosted models, pass `--model` and set its normal key variable. Helm infers common providers:
+
+```bash
+OPENAI_API_KEY=... helm-ai --model gpt-5 "Suggest a refactor"
+```
+
+Run `helm-ai --help` for all flags and supported provider key variables. The current CLI is a
+single-turn headless harness; workspace tools, approvals, diffs, and Undo remain extension-first.
 
 Ollama does not require an API key. Its default server URL is `http://localhost:11434`; Helm
 normalizes that to the server's OpenAI-compatible `/v1` endpoint for chat requests.
@@ -71,7 +98,7 @@ pnpm install
 pnpm verify
 pnpm --filter ./packages/extension test:integration
 pnpm package
-node packages/core/examples/cli-run.ts "say hi"
+pnpm package:cli
 pnpm eval --model qwen3-coder
 ```
 

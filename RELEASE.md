@@ -9,10 +9,28 @@ pnpm install --frozen-lockfile
 pnpm verify
 pnpm --filter ./packages/extension test:integration
 pnpm package
+pnpm package:cli
 ```
 
-The package command writes `dist/helm-0.1.0.vsix`. The extension host and webview are bundled, so
-the installed extension does not need this repository or its `node_modules` directory.
+The package commands write `dist/helm-0.1.0.vsix` and `dist/tanziro-helm-0.1.0.tgz`. Both artifacts
+are bundled and do not need this repository or its `node_modules` directory after installation.
+
+## Smoke-test and publish the CLI package
+
+Install the tarball into an isolated prefix before publishing it:
+
+```bash
+prefix="$(mktemp -d)"
+npm install --global --prefix "$prefix" ./dist/tanziro-helm-0.1.0.tgz
+"$prefix/bin/helm-ai" --version
+"$prefix/bin/helm-ai" "say hi"
+```
+
+After the smoke test succeeds and npm authentication is configured for the `@tanziro` scope:
+
+```bash
+npm publish ./dist/tanziro-helm-0.1.0.tgz --access public
+```
 
 ## Install from VSIX
 
@@ -49,5 +67,6 @@ replays the checked-in family fixture used in CI.
 ## Release policy
 
 - Never add API keys, generated provider transcripts, or workspace checkpoints to the package.
+- Publish the CLI tarball only after testing the packed artifact, not just the source build.
 - Marketplace publication is intentionally outside this repository's automated release process.
 - No account, backend service, or telemetry is required by the extension.

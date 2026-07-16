@@ -193,8 +193,8 @@ function codeBlock(code, label) {
 }
 
 function homePage() {
-  const cloneCommand = `git clone ${repositoryUrl}.git\ncd ${repositoryName}\ncorepack enable && pnpm install`;
-  const runnerCommand = `pnpm --filter @helm/core exec tsx examples/cli-run.ts "Explain this project"`;
+  const cliInstallCommand = `npm install --global @tanziro/helm`;
+  const runnerCommand = `helm-ai "Explain this project"`;
   const ollamaCommand = `HELM_PROVIDER=ollama HELM_MODEL=qwen3-coder ${runnerCommand}`;
   const softwareSchema = {
     '@context': 'https://schema.org',
@@ -293,11 +293,11 @@ function homePage() {
 
     <section class="section start-section" id="start">
       <div class="shell">
-        <div class="section-heading centered" data-reveal><span class="section-index">03 / START HERE</span><h2>From zero to first answer.</h2><p>The extension is the simplest path. The source runner is there when you want to meet the harness in your terminal.</p></div>
+        <div class="section-heading centered" data-reveal><span class="section-index">03 / START HERE</span><h2>From zero to first answer.</h2><p>Choose the native VS Code experience or install one terminal command. Both connect directly to the model provider you choose.</p></div>
         <div class="install-shell" data-reveal>
           <div class="install-tabs" role="tablist" aria-label="Install method">
             <button type="button" role="tab" aria-selected="true" aria-controls="install-vscode" id="tab-vscode" data-install-tab="vscode"><span class="tab-number">01</span>VS Code extension<span class="tab-badge">Recommended</span></button>
-            <button type="button" role="tab" aria-selected="false" aria-controls="install-cli" id="tab-cli" data-install-tab="cli"><span class="tab-number">02</span>CLI runner<span class="tab-badge subtle">From source</span></button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="install-cli" id="tab-cli" data-install-tab="cli"><span class="tab-number">02</span>CLI<span class="tab-badge subtle">npm</span></button>
           </div>
           <div class="install-panel" id="install-vscode" role="tabpanel" aria-labelledby="tab-vscode" data-install-panel="vscode">
             <div class="steps-grid">
@@ -309,11 +309,11 @@ function homePage() {
           </div>
           <div class="install-panel" id="install-cli" role="tabpanel" aria-labelledby="tab-cli" data-install-panel="cli" hidden>
             <div class="cli-grid">
-              <div><span class="step-number">1</span><h3>Clone and install</h3><p>Requires Node.js 20+ and pnpm 10.</p>${codeBlock(cloneCommand, 'clone and install')}</div>
-              <div><span class="step-number">2</span><h3>Run the harness</h3><p>With no provider variables, the example uses its safe mock model.</p>${codeBlock(runnerCommand, 'run the source CLI')}</div>
+              <div><span class="step-number">1</span><h3>Install globally</h3><p>Requires Node.js 20+. No repository clone or package manager setup.</p>${codeBlock(cliInstallCommand, 'install Helm CLI')}</div>
+              <div><span class="step-number">2</span><h3>Run the harness</h3><p>With no provider variables, Helm uses its safe no-key demo model.</p>${codeBlock(runnerCommand, 'run Helm CLI')}</div>
             </div>
             <div class="cli-real-model"><div><span>Use a local Ollama model</span><p>Make sure Ollama is running and the model is installed first.</p></div>${codeBlock(ollamaCommand, 'run with Ollama')}</div>
-            <p class="install-disclaimer"><strong>Good to know:</strong> this is a developer-facing source runner, not a globally installed CLI package. The VS Code extension is the polished beginner experience today.</p>
+            <p class="install-disclaimer"><strong>Good to know:</strong> the CLI is a single-turn headless harness today. Use the VS Code extension when you want workspace tools, approvals, native diffs, checkpoints, and Undo.</p>
           </div>
         </div>
       </div>

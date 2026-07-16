@@ -1,13 +1,17 @@
 # Helm architecture
 
-Helm is a pnpm monorepo with a headless agent engine, a trusted VS Code extension host, and an
-untrusted webview UI. The host owns every privileged operation.
+Helm is a pnpm monorepo with a headless agent engine, a globally installable CLI, a trusted VS Code
+extension host, and an untrusted webview UI. The extension host owns every privileged workspace
+operation.
 
 ```text
 packages/webview  <── typed postMessage protocol ──>  packages/extension
        │                                                   │
        │ browser-safe types/profiles                       │ provider calls, files,
        └──────────────── packages/core ────────────────────┘ terminal, secrets, state
+                                ▲
+                                │ bundled headless runner
+                         packages/cli
 ```
 
 ## `packages/core`
@@ -25,6 +29,14 @@ which keeps the engine headless and testable.
 Other core modules own queue semantics, context thresholds/compaction, `AGENTS.md` and `SKILL.md`
 loading, slash commands, heuristic suggestions, and the open-model eval harness. `browser.ts`
 exports only code that can safely be bundled into the webview.
+
+## `packages/cli`
+
+The npm package bundles core and its provider adapters into one dependency-free Node executable.
+It exposes `helm-ai` rather than `helm` to avoid colliding with Kubernetes Helm. Arguments override
+environment configuration, common model names infer their provider, and provider-specific key
+variables are detected without putting secrets in shell arguments. The current CLI runs the
+single-turn Chat-mode harness; workspace mutation remains extension-owned.
 
 ## `packages/extension`
 
@@ -51,7 +63,8 @@ such as popups and open cards, while durable chat/settings state comes from the 
 3. Agent mode requires approval for writes and commands; Full Access is explicitly opted into per
    workspace.
 4. The destructive-command denylist is evaluated in every mode.
-5. Provider keys stay in SecretStorage and are never sent to the webview.
+5. Extension provider keys stay in SecretStorage and are never sent to the webview; the CLI reads
+   keys from its process environment and does not persist them.
 6. Proposed file edits are applied only after a diff decision and are checkpointed for Undo.
 
 ## Testing
@@ -60,3 +73,5 @@ Vitest covers core and pure host logic with at least 70% core line coverage. The
 launches an isolated VS Code build, activates the packaged shape of the extension, and completes a
 streamed chat turn through a deterministic mock provider. Eval fixtures replay Kimi, GLM,
 DeepSeek, and Qwen tool-call behavior without live keys; a live eval remains a manual release check.
+CLI release checks install the packed tarball into an isolated global prefix and execute that
+installed binary, ensuring the published shape has no workspace dependency.

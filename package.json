@@ -22,6 +22,7 @@
     "lint": "eslint . && prettier --check . && pnpm lint:tokens",
     "lint:tokens": "node scripts/verify-webview-tokens.mjs",
     "package": "pnpm --filter ./packages/extension package",
+    "package:cli": "pnpm --dir packages/cli pack --pack-destination ../../dist",
     "site:build": "node site/build.mjs",
     "site:check": "node site/check.mjs",
     "site:preview": "pnpm site:build && node site/serve.mjs",

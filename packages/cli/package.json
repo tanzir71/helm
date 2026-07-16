@@ -1,0 +1,48 @@
+{
+  "name": "@tanziro/helm",
+  "version": "0.1.0",
+  "description": "Globally installable CLI for the Helm BYOK coding-agent harness",
+  "type": "module",
+  "bin": {
+    "helm-ai": "./dist/helm-ai.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tanzir71/helm.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/tanzir71/helm#readme",
+  "bugs": {
+    "url": "https://github.com/tanzir71/helm/issues"
+  },
+  "keywords": [
+    "ai",
+    "coding-agent",
+    "cli",
+    "ollama",
+    "open-models"
+  ],
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "clean": "rm -rf dist",
+    "prepack": "pnpm build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@helm/core": "workspace:*",
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.25.0",
+    "vitest": "^3.0.0"
+  }
+}
