@@ -90,7 +90,7 @@ export interface SkillSettingsState {
   errors: string[];
 }
 
-export type WebviewAuditMode = 'keyboard' | 'theme';
+export type WebviewAuditMode = 'keyboard' | 'responsive' | 'theme';
 
 export interface WebviewAuditResult {
   mode: WebviewAuditMode;

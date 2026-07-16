@@ -30,8 +30,8 @@ export function ComposerToolbar({
   settings,
 }: ComposerToolbarProps): React.JSX.Element {
   return (
-    <div className="flex min-w-0 items-center justify-between gap-1 px-1.5 pb-1.5">
-      <div className="flex min-w-0 items-center gap-1">
+    <div className="flex min-w-0 items-center gap-1 px-1 pb-1" data-helm-composer-toolbar="true">
+      <div className="flex shrink-0 items-center gap-0.5">
         <button
           aria-label="Attach context"
           className="flex size-6 items-center justify-center rounded-[var(--helm-radius-control)] border-0 bg-transparent p-0 hover:bg-[var(--helm-toolbar-hover)]"
@@ -52,7 +52,7 @@ export function ComposerToolbar({
           <Icon name="pinned" />
         </button>
       </div>
-      <div className="flex min-w-0 items-center justify-end gap-1">
+      <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5">
         <ModelPill
           effort={settings.reasoningEffort}
           modelId={settings.modelId}

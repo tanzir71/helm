@@ -2,6 +2,7 @@ import type { ApprovalMode } from '@helm/core/browser';
 import { useEffect, useRef, useState } from 'react';
 
 import { Icon } from '../Icon';
+import { useAnchoredPopover } from './use-anchored-popover';
 
 export interface ModePillProps {
   mode: ApprovalMode;
@@ -17,6 +18,7 @@ const modes: Array<{ id: ApprovalMode; label: string; description: string }> = [
 export function ModePill({ mode, onChange }: ModePillProps): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const { popoverStyle, triggerRef } = useAnchoredPopover(open);
   const label = modes.find((item) => item.id === mode)?.label ?? mode;
 
   useEffect(() => {
@@ -29,10 +31,12 @@ export function ModePill({ mode, onChange }: ModePillProps): React.JSX.Element {
   }, [mode, open]);
 
   return (
-    <div className="relative">
+    <div className="relative shrink-0">
       {open && (
         <div
-          className="absolute right-0 bottom-[calc(100%+4px)] z-20 grid w-[min(240px,calc(100vw-16px))] gap-1 rounded-[var(--helm-radius-container)] border border-[var(--helm-border)] bg-[var(--helm-widget-background)] p-1 shadow-[var(--helm-popover-shadow)]"
+          aria-label="Agent mode"
+          className="fixed z-20 grid max-h-[calc(100vh-16px)] gap-1 overflow-auto rounded-[var(--helm-radius-container)] border border-[var(--helm-border)] bg-[var(--helm-widget-background)] p-1 shadow-[var(--helm-popover-shadow)]"
+          data-helm-popover="mode"
           onKeyDown={(event) => {
             const current = optionRefs.current.findIndex(
               (element) => element === document.activeElement,
@@ -51,6 +55,7 @@ export function ModePill({ mode, onChange }: ModePillProps): React.JSX.Element {
             }
           }}
           role="menu"
+          style={popoverStyle}
         >
           {modes.map((item, index) => (
             <button
@@ -89,8 +94,11 @@ export function ModePill({ mode, onChange }: ModePillProps): React.JSX.Element {
       )}
       <button
         aria-expanded={open}
-        className="flex items-center gap-1 rounded-[var(--helm-radius-control)] border-0 bg-transparent px-1.5 py-1 text-[length:var(--helm-font-size-meta)] text-[var(--helm-description-foreground)] hover:bg-[var(--helm-toolbar-hover)] hover:text-[var(--helm-panel-foreground)]"
+        aria-haspopup="menu"
+        aria-label="Choose agent mode"
+        className="flex h-6 items-center gap-1 whitespace-nowrap rounded-[var(--helm-radius-control)] border-0 bg-transparent px-1.5 py-0 text-[length:var(--helm-font-size-meta)] text-[var(--helm-description-foreground)] hover:bg-[var(--helm-toolbar-hover)] hover:text-[var(--helm-panel-foreground)]"
         onClick={() => setOpen((current) => !current)}
+        ref={triggerRef}
         type="button"
       >
         {mode === 'fullAccess' && <Icon className="text-[var(--helm-warning)]" name="warning" />}

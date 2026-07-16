@@ -13,9 +13,24 @@ export async function runWebviewAudit(mode: WebviewAuditMode): Promise<WebviewAu
   };
 
   const settingsInitiallyOpen = Boolean(findButton('Back'));
+  if (mode === 'responsive') {
+    if (settingsInitiallyOpen) {
+      findButton('Back')?.click();
+      await nextPaint();
+    }
+    await auditIconFont(result.errors);
+    await auditResponsiveLayout(result.errors);
+    if (settingsInitiallyOpen) {
+      document.querySelector<HTMLButtonElement>('button[aria-label="Open settings"]')?.click();
+      await nextPaint();
+    }
+    return result;
+  }
+
   if (!settingsInitiallyOpen && mode === 'keyboard') {
     result.mainInteractiveCount = auditInteractiveElements(document, 'main', result.errors);
   }
+  await auditIconFont(result.errors);
 
   if (!settingsInitiallyOpen) {
     const settingsButton = document.querySelector<HTMLButtonElement>(
@@ -133,4 +148,136 @@ function findButton(label: string): HTMLButtonElement | undefined {
 async function nextPaint(): Promise<void> {
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+async function auditIconFont(errors: string[]): Promise<void> {
+  await document.fonts.ready;
+  const icon = [...document.querySelectorAll<HTMLElement>('.codicon')].find((element) => {
+    const rect = element.getBoundingClientRect();
+    return !isHidden(element) && rect.width > 0 && rect.height > 0;
+  });
+  if (!icon) {
+    errors.push('Could not find a visible Codicon to audit.');
+    return;
+  }
+  const pseudoStyle = getComputedStyle(icon, '::before');
+  const glyph = pseudoStyle.content.replace(/^['"]|['"]$/gu, '');
+  if (!glyph || glyph === 'none') errors.push('Visible Codicon has no ::before glyph content.');
+  if (!pseudoStyle.fontFamily.toLowerCase().includes('codicon')) {
+    errors.push(`Visible icon resolved ${pseudoStyle.fontFamily} instead of the Codicon font.`);
+  }
+  if (!document.fonts.check('14px codicon', glyph || '\uea60')) {
+    errors.push('The Codicon font face did not load inside the webview.');
+  }
+}
+
+async function auditResponsiveLayout(errors: string[]): Promise<void> {
+  const root = document.documentElement;
+  const initialWidth = root.style.width;
+  let modelOpened = false;
+  let modeOpened = false;
+  root.style.width = '240px';
+  try {
+    await nextPaint();
+    const toolbar = document.querySelector<HTMLElement>('[data-helm-composer-toolbar]');
+    if (!toolbar) {
+      errors.push('Could not find the composer toolbar for responsive audit.');
+      return;
+    }
+    const toolbarRect = toolbar.getBoundingClientRect();
+    const controls = [...toolbar.querySelectorAll<HTMLButtonElement>('button')].filter(
+      (button) => !isHidden(button),
+    );
+    if (controls.length < 5) {
+      errors.push(`Expected 5 composer controls at 240px, found ${controls.length}.`);
+    }
+    for (const control of controls) {
+      const rect = control.getBoundingClientRect();
+      if (rect.left < toolbarRect.left - 0.5 || rect.right > toolbarRect.right + 0.5) {
+        errors.push(`${describeElement(control)} escapes the 240px composer toolbar.`);
+      }
+      if (Math.abs(rect.height - 24) > 0.5) {
+        errors.push(`${describeElement(control)} is ${rect.height}px tall instead of 24px.`);
+      }
+    }
+    for (let leftIndex = 0; leftIndex < controls.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < controls.length; rightIndex += 1) {
+        const left = controls[leftIndex]!;
+        const right = controls[rightIndex]!;
+        if (rectanglesOverlap(left.getBoundingClientRect(), right.getBoundingClientRect())) {
+          errors.push(`${describeElement(left)} overlaps ${describeElement(right)} at 240px.`);
+        }
+      }
+    }
+
+    const modelButton = document.querySelector<HTMLButtonElement>(
+      'button[aria-label="Choose model and reasoning effort"]',
+    );
+    if (!modelButton) {
+      errors.push('Could not find the model picker for responsive audit.');
+      return;
+    }
+    modelButton.click();
+    modelOpened = true;
+    await nextPaint();
+    const popover = document.querySelector<HTMLElement>('[data-helm-popover="model"]');
+    if (!popover) {
+      errors.push('Model picker did not open during responsive audit.');
+      return;
+    }
+    const popoverRect = popover.getBoundingClientRect();
+    const rootRect = root.getBoundingClientRect();
+    if (
+      popoverRect.left < rootRect.left + 7.5 ||
+      popoverRect.right > rootRect.right - 7.5 ||
+      popoverRect.top < rootRect.top + 7.5
+    ) {
+      errors.push('Model picker escapes the visible 240px webview bounds.');
+    }
+    modelButton.click();
+    modelOpened = false;
+    await nextPaint();
+
+    const modeButton = document.querySelector<HTMLButtonElement>(
+      'button[aria-label="Choose agent mode"]',
+    );
+    if (!modeButton) {
+      errors.push('Could not find the mode picker for responsive audit.');
+      return;
+    }
+    modeButton.click();
+    modeOpened = true;
+    await nextPaint();
+    const modePopover = document.querySelector<HTMLElement>('[data-helm-popover="mode"]');
+    if (!modePopover) {
+      errors.push('Mode picker did not open during responsive audit.');
+      return;
+    }
+    const modeRect = modePopover.getBoundingClientRect();
+    if (
+      modeRect.left < rootRect.left + 7.5 ||
+      modeRect.right > rootRect.right - 7.5 ||
+      modeRect.top < rootRect.top + 7.5
+    ) {
+      errors.push('Mode picker escapes the visible 240px webview bounds.');
+    }
+  } finally {
+    if (modelOpened) {
+      document
+        .querySelector<HTMLButtonElement>('button[aria-label="Choose model and reasoning effort"]')
+        ?.click();
+    }
+    if (modeOpened) {
+      document.querySelector<HTMLButtonElement>('button[aria-label="Choose agent mode"]')?.click();
+    }
+    root.style.width = initialWidth;
+    await nextPaint();
+  }
+}
+
+function rectanglesOverlap(left: DOMRect, right: DOMRect): boolean {
+  return (
+    Math.min(left.right, right.right) - Math.max(left.left, right.left) > 0.5 &&
+    Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top) > 0.5
+  );
 }

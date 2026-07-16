@@ -45,11 +45,11 @@ export function EmptyState({
   }
 
   return (
-    <section className="mx-auto flex w-full max-w-[280px] flex-col gap-2 px-4 py-5">
-      <strong className="mb-1 font-semibold">What are we building?</strong>
+    <section className="mx-auto flex w-full max-w-[280px] flex-col gap-1 px-1 py-3">
+      <strong className="mb-1 px-1 font-semibold">What are we building?</strong>
       {starters.map((starter) => (
         <button
-          className="flex min-w-0 items-center gap-2 rounded-[var(--helm-radius-control)] border-0 bg-transparent px-2 py-1.5 text-left text-[length:var(--helm-font-size-meta)] hover:bg-[var(--helm-list-hover)]"
+          className="flex min-w-0 items-start gap-1.5 rounded-[var(--helm-radius-control)] border-0 bg-transparent px-1 py-1 text-left text-[length:var(--helm-font-size-meta)] hover:bg-[var(--helm-list-hover)]"
           key={starter}
           onClick={() => onSend(starter)}
           type="button"

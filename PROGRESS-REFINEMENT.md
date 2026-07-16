@@ -2,13 +2,16 @@
 
 ## Current
 
-Automated refinement is complete. The remaining work is the required human screenshot and live
-in-extension capability review below.
+The first human screenshot review failed on missing icons, narrow composer overlap, clipped model
+and mode popovers, and loose empty-state spacing. R7.2 repairs those failures and adds a rendered
+240 px regression audit. The remaining work is a fresh human screenshot and live in-extension
+capability review below.
 
-1. Reload the open Extension Development Host so it uses the latest build.
-2. Complete the screenshot-parity checklist at normal and narrow sidebar widths.
-3. Complete the three live capability checks and record any failure with a screenshot/repro.
-4. Confirm the human gate; then the refinement goal can be closed.
+1. Review the freshly opened Extension Development Host at normal and 240 px sidebar widths.
+2. Confirm icons render, composer controls do not overlap, both pickers remain visible, and the
+   empty-state spacing looks native.
+3. Complete the full screenshot-parity checklist and the three live capability checks below.
+4. Record any remaining failure with a screenshot/repro; otherwise confirm the human gate.
 
 ## Milestones
 
@@ -80,6 +83,12 @@ in-extension capability review below.
 ## Awaiting human review
 
 ### Screenshot parity **[HUMAN-GATE]**
+
+Failed review recorded 2026-07-16: the supplied screenshots showed every Codicon as an empty box,
+model/mode controls overlapping in the narrow composer, the model popover extending beyond the
+left webview edge, inconsistent 24 px toolbar control sizing, and excessive empty-state indentation.
+The repair is automated and packaged, but these visual items intentionally remain unchecked until
+the reviewer confirms the new rendered build.
 
 Repro:
 
@@ -181,3 +190,11 @@ Repro:
   accurately. `pnpm verify` passes with 74 core, 30 webview, and 14 extension tests at 83.04% core
   coverage; Electron is 7/7, recorded eval tool-call success is 100%, and the packaged 50.6 MB VSIX
   contains all eleven skills plus the bundled CodeGraph runtime. The human gate remains unchecked.
+- [2026-07-16] R7.2 repaired the failed screenshot review: Vite now emits webview-relative assets so
+  Codicons load under the VS Code webview origin; composer controls share a consistent 24 px row;
+  model/mode popovers clamp to the visible panel; and the starter state uses tighter native spacing.
+  The rendered 240 px audit now checks the font face, five non-overlapping controls, and both picker
+  bounds. `pnpm verify` passes with 74 core, 31 webview, and 14 extension tests at 83.04% core
+  coverage; Electron is 8/8, recorded eval tool-call success is 100%, and the 50.6 MB VSIX contains
+  a relative Codicon URL, all eleven skills, and the CodeGraph runtime. The human gate remains
+  unchecked pending re-review.

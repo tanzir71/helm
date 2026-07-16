@@ -118,4 +118,13 @@ describe('Helm extension', () => {
       }
     }
   });
+
+  it('loads Codicons and contains the composer and pickers at 240px', async () => {
+    const result = await vscode.commands.executeCommand<WebviewAuditResult>(
+      'helm.testWebviewAudit',
+      'responsive',
+    );
+    assert.ok(result, 'Webview responsive audit returned no result');
+    assert.deepEqual(result.errors, []);
+  });
 });

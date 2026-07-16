@@ -70,7 +70,10 @@ export function Composer({
   };
 
   return (
-    <div className="relative min-w-0 rounded-[var(--helm-radius-container)] border border-[var(--helm-border)] bg-[var(--helm-input-background)] focus-within:border-[var(--helm-focus-border)]">
+    <div
+      className="relative min-w-0 rounded-[var(--helm-radius-container)] border border-[var(--helm-border)] bg-[var(--helm-input-background)] focus-within:border-[var(--helm-focus-border)]"
+      data-helm-composer="true"
+    >
       <CommandPopover
         activeIndex={activeCommandIndex}
         input={input}

@@ -1,3 +1,4 @@
+import type { WebviewAuditMode } from '@helm/core';
 import * as vscode from 'vscode';
 
 import { HelmViewProvider } from './view-provider.js';
@@ -28,7 +29,7 @@ export function activate(context: vscode.ExtensionContext): void {
       ),
       vscode.commands.registerCommand('helm.testPlanExecution', () => provider.testPlanExecution()),
       vscode.commands.registerCommand('helm.testTwoFileEdit', () => provider.testTwoFileEdit()),
-      vscode.commands.registerCommand('helm.testWebviewAudit', (mode: 'keyboard' | 'theme') =>
+      vscode.commands.registerCommand('helm.testWebviewAudit', (mode: WebviewAuditMode) =>
         provider.testWebviewAudit(mode),
       ),
     );

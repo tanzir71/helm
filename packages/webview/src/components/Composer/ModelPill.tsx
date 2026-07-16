@@ -2,6 +2,7 @@ import type { SessionSettings } from '@helm/core/browser';
 import { useEffect, useRef, useState } from 'react';
 
 import { Icon } from '../Icon';
+import { useAnchoredPopover } from './use-anchored-popover';
 
 export interface ModelPillProps {
   effort: SessionSettings['reasoningEffort'];
@@ -18,6 +19,7 @@ export function ModelPill({
 }: ModelPillProps): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const selectRef = useRef<HTMLSelectElement>(null);
+  const { popoverStyle, triggerRef } = useAnchoredPopover(open);
   const shortModel = modelId.includes('/') ? (modelId.split('/').at(-1) ?? modelId) : modelId;
 
   useEffect(() => {
@@ -25,10 +27,12 @@ export function ModelPill({
   }, [open]);
 
   return (
-    <div className="relative min-w-0">
+    <div className="relative min-w-0 flex-1">
       {open && (
         <div
-          className="absolute right-0 bottom-[calc(100%+4px)] z-20 grid w-[min(240px,calc(100vw-16px))] gap-2 rounded-[var(--helm-radius-container)] border border-[var(--helm-border)] bg-[var(--helm-widget-background)] p-2 shadow-[var(--helm-popover-shadow)]"
+          aria-label="Model and reasoning effort"
+          className="fixed z-20 grid max-h-[calc(100vh-16px)] gap-2 overflow-auto rounded-[var(--helm-radius-container)] border border-[var(--helm-border)] bg-[var(--helm-widget-background)] p-2 shadow-[var(--helm-popover-shadow)]"
+          data-helm-popover="model"
           onKeyDown={(event) => {
             if (event.key === 'Escape') {
               event.preventDefault();
@@ -36,6 +40,7 @@ export function ModelPill({
             }
           }}
           role="dialog"
+          style={popoverStyle}
         >
           <label className="text-[length:var(--helm-font-size-meta)]">
             Model
@@ -73,13 +78,16 @@ export function ModelPill({
       )}
       <button
         aria-expanded={open}
-        className="flex max-w-[160px] items-center gap-1 rounded-[var(--helm-radius-control)] border-0 bg-transparent px-1.5 py-1 text-[length:var(--helm-font-size-meta)] text-[var(--helm-description-foreground)] hover:bg-[var(--helm-toolbar-hover)] hover:text-[var(--helm-panel-foreground)]"
+        aria-haspopup="dialog"
+        aria-label="Choose model and reasoning effort"
+        className="ml-auto flex h-6 w-full min-w-0 max-w-[160px] items-center gap-1 rounded-[var(--helm-radius-control)] border-0 bg-transparent px-1.5 py-0 text-[length:var(--helm-font-size-meta)] text-[var(--helm-description-foreground)] hover:bg-[var(--helm-toolbar-hover)] hover:text-[var(--helm-panel-foreground)]"
         onClick={() => setOpen((current) => !current)}
         title={`${modelId} · ${effort}`}
+        ref={triggerRef}
         type="button"
       >
-        <span className="min-w-0 truncate">{shortModel}</span>
-        <span>· {effort}</span>
+        <span className="min-w-0 flex-1 truncate">{shortModel}</span>
+        <span className="helm-model-effort shrink-0 whitespace-nowrap">· {effort}</span>
         <Icon name="chevron-down" />
       </button>
     </div>

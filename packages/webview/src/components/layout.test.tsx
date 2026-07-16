@@ -43,5 +43,7 @@ describe('sidebar overflow containment', () => {
     expect(unconfigured).toContain('Connect a model provider');
     expect(unconfigured).not.toContain('Explain this project');
     expect(configured).toContain('Explain this project');
+    expect(configured).toContain('gap-1 px-1 py-3');
+    expect(configured).toContain('items-start gap-1.5');
   });
 });
