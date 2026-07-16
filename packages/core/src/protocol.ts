@@ -28,6 +28,13 @@ export interface SessionSettings {
   plan?: PlanState;
 }
 
+export type SuggestionKind = 'prompt' | 'undo' | 'restoreCheckpoint';
+
+export interface SuggestedAction {
+  kind: SuggestionKind;
+  label: string;
+}
+
 export type WebviewToHostMessage =
   | { type: 'webviewReady' }
   | { type: 'userMessage'; id: string; text: string }
@@ -85,7 +92,8 @@ export type HostToWebviewMessage =
   | { type: 'toolCallFinished'; callId: string; tool: string; output: unknown; ok: boolean }
   | { type: 'toolApprovalRequested'; callId: string; tool: string; summary: string }
   | { type: 'diffProposed'; diffId: string; path: string; before: string; after: string }
-  | { type: 'suggestions'; items: string[] }
+  | { type: 'suggestions'; items: SuggestedAction[] }
+  | { type: 'suggestionAvailable'; item: SuggestedAction }
   | { type: 'queueUpdated'; items: Array<{ id: string; text: string }> }
   | { type: 'steered'; id: string; text: string }
   | { type: 'compacted'; tokensBefore: number; tokensAfter: number }
@@ -97,8 +105,6 @@ export type HostToWebviewMessage =
   | { type: 'goalChanged'; goal?: string }
   | { type: 'planChanged'; plan?: PlanState }
   | { type: 'fullAccessConfirmationRequired' }
-  | { type: 'undoAvailable'; label: string }
-  | { type: 'checkpointAvailable'; label: string }
   | { type: 'error'; message: string; action?: string };
 
 export function isWebviewToHostMessage(value: unknown): value is WebviewToHostMessage {

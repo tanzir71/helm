@@ -317,7 +317,10 @@ export class ExtensionToolHost implements ToolHost, vscode.Disposable {
     await this.checkpoint(relativePath, uri, before);
     await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(uri, '..'));
     await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(after));
-    this.post({ type: 'undoAvailable', label: `Undo ${relativePath}` });
+    this.post({
+      type: 'suggestionAvailable',
+      item: { kind: 'undo', label: `Undo ${relativePath}` },
+    });
   }
 
   private async checkpoint(label: string, uri: vscode.Uri, before: string): Promise<void> {

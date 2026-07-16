@@ -21,11 +21,16 @@ import {
   type QueuedInstruction,
   type ResolvedModel,
   type SessionSettings,
+  type SuggestedAction,
   type WebviewToHostMessage,
 } from '@helm/core';
 import * as vscode from 'vscode';
 
 import { ExtensionToolHost } from './tool-host.js';
+
+function promptSuggestions(labels: string[]): SuggestedAction[] {
+  return labels.map((label) => ({ kind: 'prompt', label }));
+}
 
 interface StoredSession {
   messages: ChatMessage[];
@@ -303,14 +308,14 @@ export class SessionManager implements vscode.Disposable {
       case 'undoLastChange':
         this.post(
           (await this.toolHost.undoLast())
-            ? { type: 'suggestions', items: ['Run the tests', 'Show git diff'] }
+            ? { type: 'suggestions', items: promptSuggestions(['Run the tests', 'Show git diff']) }
             : { type: 'error', message: 'There is no Helm checkpoint to restore.' },
         );
         break;
       case 'restoreCheckpoint':
         this.post(
           (await this.toolHost.restoreLastTurn())
-            ? { type: 'suggestions', items: ['Run the tests', 'Show git diff'] }
+            ? { type: 'suggestions', items: promptSuggestions(['Run the tests', 'Show git diff']) }
             : { type: 'error', message: 'There is no Helm turn checkpoint to restore.' },
         );
         break;
@@ -389,6 +394,7 @@ export class SessionManager implements vscode.Disposable {
       messages: this.session.messages,
       settings: this.settings(),
     });
+    this.post({ type: 'runStateChanged', state: this.running ? 'running' : 'idle' });
     this.postQueue();
     this.postSettings();
   }
@@ -519,7 +525,9 @@ export class SessionManager implements vscode.Disposable {
       this.post({ type: 'assistantCompleted', id: assistant.id });
       this.post({
         type: 'suggestions',
-        items: await this.generateSuggestions(resolvedModel, text, result.suggestions),
+        items: promptSuggestions(
+          await this.generateSuggestions(resolvedModel, text, result.suggestions),
+        ),
       });
       if (command?.command === 'plan') {
         const steps = extractPlan(text);
@@ -555,7 +563,10 @@ export class SessionManager implements vscode.Disposable {
       }
     } finally {
       if (this.toolHost.hasCheckpointForTurn(assistant.id)) {
-        this.post({ type: 'checkpointAvailable', label: 'Restore turn checkpoint' });
+        this.post({
+          type: 'suggestionAvailable',
+          item: { kind: 'restoreCheckpoint', label: 'Restore turn checkpoint' },
+        });
       }
       this.running = false;
       this.controller = undefined;
