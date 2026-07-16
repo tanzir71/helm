@@ -1,0 +1,51 @@
+:root {
+  color: var(--vscode-foreground, #202124);
+  background: var(--vscode-sideBar-background, #f6f7f9);
+  font-family: var(--vscode-font-family, Inter, system-ui, sans-serif);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.shell {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+.mark {
+  color: var(--vscode-textLink-foreground, #087ea4);
+  font-size: 38px;
+}
+
+h1,
+p {
+  margin: 0;
+}
+
+p {
+  color: var(--vscode-descriptionForeground, #5f6368);
+}
+
+button {
+  margin-top: 12px;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--vscode-button-foreground, white);
+  background: var(--vscode-button-background, #087ea4);
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--vscode-button-hoverBackground, #066b8a);
+}

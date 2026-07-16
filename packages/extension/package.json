@@ -1,0 +1,82 @@
+{
+  "name": "@helm/extension",
+  "displayName": "Helm",
+  "description": "Beginner-friendly BYOK coding agent",
+  "version": "0.1.0",
+  "private": true,
+  "publisher": "helm-local",
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:helm.chatView",
+    "onCommand:helm.openChat"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "helm.openChat",
+        "title": "Helm: Open Chat"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "helm",
+          "title": "Helm",
+          "icon": "media/helm.svg"
+        }
+      ]
+    },
+    "views": {
+      "helm": [
+        {
+          "type": "webview",
+          "id": "helm.chatView",
+          "name": "Chat"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Helm",
+      "properties": {
+        "helm.enterBehavior": {
+          "type": "string",
+          "enum": [
+            "queue",
+            "steer"
+          ],
+          "default": "queue",
+          "description": "What Enter does while an agent run is active."
+        },
+        "helm.utilityModel": {
+          "type": "string",
+          "default": "",
+          "description": "Optional inexpensive model for summaries and suggestions."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "pnpm --filter @helm/webview build && node esbuild.mjs",
+    "clean": "rm -rf dist .vscode-test",
+    "package": "pnpm build && mkdir -p ../../dist && vsce package --out ../../dist/helm-0.1.0.vsix",
+    "test": "vitest run",
+    "test:integration": "node ./dist-test/runTest.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@helm/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.96.0",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.2.1",
+    "esbuild": "^0.25.0"
+  }
+}

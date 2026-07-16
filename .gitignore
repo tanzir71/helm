@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+*.vsix
+*.log
+.DS_Store
+.vscode-test/
+packages/extension/.vscode-test/
+packages/webview/dist/
+
