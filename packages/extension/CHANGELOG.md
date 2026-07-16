@@ -9,3 +9,5 @@
   editor-follow navigation for accepted edits.
 - Automatic intent-based skill routing before other tools, including constrained open-model tool
   profiles and observable `use_skill` activity.
+- Automatic active-editor context moved from the composer pin into a clearly labeled Context
+  setting.

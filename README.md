@@ -14,7 +14,7 @@ terminal prompts.
 - Assist and Solo workflow tabs; Solo plans first, pauses for approval, then runs the plan as a goal
 - Markdown responses, highlighted code, collapsible reasoning, live tool cards, diffs, and Undo
 - Queued prompts, mid-run steering, Stop/Resume, persistent goals, and slash commands
-- `@file`, `@folder`, `@problems`, and `@terminal` context plus optional active-file context
+- `@file`, `@folder`, `@problems`, and `@terminal` context plus active-editor context controlled in Settings
 - Root and nested `AGENTS.md`, intent-routed `SKILL.md` workflows, and context compaction
 - Open-model profiles, tool-call repair, loop detection, and a fixture-backed reliability eval
 

@@ -10,6 +10,7 @@ import type {
 
 import { Icon } from '../Icon';
 import { CodeGraphSection } from './CodeGraphSection';
+import { ContextSection } from './ContextSection';
 import { DefaultsSection } from './DefaultsSection';
 import { ProviderSection } from './ProviderSection';
 import { SkillsSection } from './SkillsSection';
@@ -48,6 +49,7 @@ export interface SettingsViewProps {
     reasoningEffort: SessionSettings['reasoningEffort'];
   }) => void;
   onTestConnection: (provider: string, modelId: string, baseURL: string, key?: string) => void;
+  onToggleAutoContext: (enabled: boolean) => void;
   onSaveWebSettings: (settings: {
     enabled: boolean;
     provider: WebSearchProviderId;
@@ -84,6 +86,7 @@ export function SettingsView({
   onSaveWebSettings,
   onTestConnection,
   onTestWebSearch,
+  onToggleAutoContext,
   providerKeyStates,
   settings,
   skillsSettings,
@@ -114,6 +117,7 @@ export function SettingsView({
           settings={settings}
         />
         <DefaultsSection onSave={onSaveDefaults} settings={settings} />
+        <ContextSection enabled={settings.autoContext} onToggle={onToggleAutoContext} />
         <WebSection
           connectionResults={connectionResults}
           onRemoveAllowedDomain={onRemoveAllowedDomain}

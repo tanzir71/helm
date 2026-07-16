@@ -18,7 +18,6 @@ export type IconName =
   | 'globe'
   | 'mention'
   | 'link-external'
-  | 'pinned'
   | 'play'
   | 'search'
   | 'send'

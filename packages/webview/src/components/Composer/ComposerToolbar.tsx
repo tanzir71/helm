@@ -13,7 +13,6 @@ export interface ComposerToolbarProps {
   onModeChange: (mode: ApprovalMode) => void;
   onSend: () => void;
   onStop: () => void;
-  onToggleAutoContext: () => void;
   running: boolean;
   settings: SessionSettings;
 }
@@ -27,7 +26,6 @@ export function ComposerToolbar({
   onModeChange,
   onSend,
   onStop,
-  onToggleAutoContext,
   running,
   settings,
 }: ComposerToolbarProps): React.JSX.Element {
@@ -51,16 +49,6 @@ export function ComposerToolbar({
           type="button"
         >
           <Icon name="mention" />
-        </button>
-        <button
-          aria-label={`Automatic context ${settings.autoContext ? 'on' : 'off'}`}
-          aria-pressed={settings.autoContext}
-          className={`flex size-6 items-center justify-center rounded-[var(--helm-radius-control)] border-0 p-0 hover:bg-[var(--helm-toolbar-hover)] ${settings.autoContext ? 'bg-[var(--helm-input-option-active)]' : 'bg-transparent'}`}
-          onClick={onToggleAutoContext}
-          title="Include active editor context"
-          type="button"
-        >
-          <Icon name="pinned" />
         </button>
       </div>
       <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5">

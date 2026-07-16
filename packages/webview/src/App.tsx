@@ -241,6 +241,7 @@ export function App(): React.JSX.Element {
           onSaveCodeGraphSettings={(enabled) =>
             vscode.postMessage({ type: 'saveCodeGraphSettings', enabled })
           }
+          onToggleAutoContext={(enabled) => vscode.postMessage({ type: 'setAutoContext', enabled })}
           onRemoveApiKey={(provider) => vscode.postMessage({ type: 'removeApiKey', provider })}
           onRemoveWebApiKey={(provider) =>
             vscode.postMessage({ type: 'removeWebApiKey', provider })
@@ -406,9 +407,6 @@ export function App(): React.JSX.Element {
           }
           onStop={() => vscode.postMessage({ type: 'stopRun' })}
           onSubmit={send}
-          onToggleAutoContext={() =>
-            vscode.postMessage({ type: 'setAutoContext', enabled: !state.settings.autoContext })
-          }
           running={running}
           settings={state.settings}
         />

@@ -25,7 +25,6 @@ export interface ComposerProps {
   onRemoveFileAttachment: (reference: string) => void;
   onStop: () => void;
   onSubmit: (kind: SubmitKind) => void;
-  onToggleAutoContext: () => void;
   running: boolean;
   settings: SessionSettings;
 }
@@ -42,7 +41,6 @@ export function Composer({
   onRemoveFileAttachment,
   onStop,
   onSubmit,
-  onToggleAutoContext,
   running,
   settings,
 }: ComposerProps): React.JSX.Element {
@@ -154,7 +152,6 @@ export function Composer({
         onModeChange={onModeChange}
         onSend={() => onSubmit(primarySubmit)}
         onStop={onStop}
-        onToggleAutoContext={onToggleAutoContext}
         running={running}
         settings={settings}
       />
